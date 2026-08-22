@@ -321,3 +321,41 @@ button.portal-sair-btn{
   .portal-documentos-buttons{left:8px;bottom:34px;gap:6px;}
   .portal-documentos-buttons button{font-size:9.5px;padding:7px 9px;max-width:118px;}
 }
+
+
+/* Botões Trabalho/Planejamento: tamanho um pouco maior */
+.portal-documentos-buttons button{
+  padding:10px 15px!important;
+  font-size:12px!important;
+  max-width:178px!important;
+  min-height:38px!important;
+  line-height:1.12!important;
+}
+@media(max-width:760px){
+  .portal-documentos-buttons button{
+    font-size:10.5px!important;
+    padding:8px 11px!important;
+    max-width:142px!important;
+    min-height:34px!important;
+  }
+}
+
+
+/* Trabalho/Planejamento: documento novo forte, já visualizado transparente */
+.portal-documentos-buttons button.documento-novo{
+  opacity:1!important;
+  filter:none!important;
+  box-shadow:0 5px 16px rgba(0,0,0,.32),0 0 0 3px rgba(249,198,20,.22)!important;
+}
+.portal-documentos-buttons button.documento-visto{
+  opacity:.42!important;
+  filter:saturate(.65) grayscale(.25)!important;
+  box-shadow:0 2px 7px rgba(0,0,0,.16)!important;
+}
+#portal-btn-trabalho.documento-visto,
+#portal-btn-planejamento.documento-visto{
+  background:#6f7782!important;
+  border-color:rgba(255,255,255,.55)!important;
+}
+#portal-btn-trabalho.documento-novo{background:#0984e3!important;}
+#portal-btn-planejamento.documento-novo{background:#27ae60!important;}

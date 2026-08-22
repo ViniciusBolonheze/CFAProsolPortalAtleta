@@ -192,15 +192,48 @@ function escolherRegistroDocumentoPortal(registros){
   if(extras.length)return extras[0];
   return validos.find(registroPadraoAnoPortal)||null;
 }
+function documentoEstaVistoNoAcessoPortal(acessos, reg){
+  const chave=chaveDocumentoPortal(reg);
+  if(!chave||!Array.isArray(acessos))return false;
+  return acessos.some(a=>String(a.chave_documento||a.storage_path||'')===chave);
+}
+async function documentoAtualVistoPortal(tipo, reg){
+  if(!atletaLogado||!reg)return false;
+  try{
+    const {data,error}=await sb.from('portal_documentos_acessos')
+      .select('acessos')
+      .eq('nome_completo',atletaLogado.nomeCompleto)
+      .eq('nascimento',atletaLogado.nascimento)
+      .eq('tipo',tipo)
+      .eq('categoria_id',reg.categoria_id||'')
+      .maybeSingle();
+    if(error){console.warn('Não foi possível verificar visualização do documento:',error);return false;}
+    return documentoEstaVistoNoAcessoPortal(data&&data.acessos,data?reg:null);
+  }catch(e){
+    console.warn('Erro ao verificar visualização do documento:',e);
+    return false;
+  }
+}
+function aplicarEstadoBotaoDocumentoPortal(tipo){
+  const btn = tipo==='trabalho' ? document.getElementById('portal-btn-trabalho') : document.getElementById('portal-btn-planejamento');
+  const reg = tipo==='trabalho' ? documentosPortalAtleta.trabalho : documentosPortalAtleta.planejamento;
+  const visto = tipo==='trabalho' ? !!documentosPortalAtleta.trabalhoVisto : !!documentosPortalAtleta.planejamentoVisto;
+  if(!btn)return;
+  btn.classList.remove('documento-visto','documento-novo');
+  if(!reg){btn.style.display='none';return;}
+  btn.style.display='inline-flex';
+  btn.classList.add(visto?'documento-visto':'documento-novo');
+  btn.title = visto ? 'Documento já visualizado' : 'Novo documento disponível';
+}
 async function carregarDocumentosPortalAtleta(){
   const box=document.getElementById('portal-documentos-buttons');
   const btnTrabalho=document.getElementById('portal-btn-trabalho');
   const btnPlanejamento=document.getElementById('portal-btn-planejamento');
-  documentosPortalAtleta={trabalho:null,planejamento:null};
+  documentosPortalAtleta={trabalho:null,planejamento:null,trabalhoVisto:false,planejamentoVisto:false};
   if(!box||!atletaLogado){if(box)box.style.display='none';return;}
   box.style.display='none';
-  if(btnTrabalho)btnTrabalho.style.display='none';
-  if(btnPlanejamento)btnPlanejamento.style.display='none';
+  if(btnTrabalho){btnTrabalho.style.display='none';btnTrabalho.classList.remove('documento-visto','documento-novo');}
+  if(btnPlanejamento){btnPlanejamento.style.display='none';btnPlanejamento.classList.remove('documento-visto','documento-novo');}
   try{
     const [td,ps]=await Promise.all([
       sb.from('trabalhos_diarios').select('*'),
@@ -208,8 +241,16 @@ async function carregarDocumentosPortalAtleta(){
     ]);
     if(!td.error) documentosPortalAtleta.trabalho=escolherRegistroDocumentoPortal(td.data||[]);
     if(!ps.error) documentosPortalAtleta.planejamento=escolherRegistroDocumentoPortal(ps.data||[]);
-    if(documentosPortalAtleta.trabalho&&btnTrabalho)btnTrabalho.style.display='inline-flex';
-    if(documentosPortalAtleta.planejamento&&btnPlanejamento)btnPlanejamento.style.display='inline-flex';
+
+    const [trabalhoVisto, planejamentoVisto] = await Promise.all([
+      documentosPortalAtleta.trabalho ? documentoAtualVistoPortal('trabalho_diario', documentosPortalAtleta.trabalho) : Promise.resolve(false),
+      documentosPortalAtleta.planejamento ? documentoAtualVistoPortal('planejamento_semanal', documentosPortalAtleta.planejamento) : Promise.resolve(false)
+    ]);
+    documentosPortalAtleta.trabalhoVisto=trabalhoVisto;
+    documentosPortalAtleta.planejamentoVisto=planejamentoVisto;
+
+    aplicarEstadoBotaoDocumentoPortal('trabalho');
+    aplicarEstadoBotaoDocumentoPortal('planejamento');
     box.style.display=(documentosPortalAtleta.trabalho||documentosPortalAtleta.planejamento)?'flex':'none';
   }catch(e){
     console.warn('Erro ao carregar trabalhos/planejamentos do atleta:',e);
@@ -224,15 +265,113 @@ function urlDocumentoPortal(reg,bucket){
   }
   return '';
 }
+function dataDocumentoPortal(reg){
+  const base=String(reg?.atualizado_em||reg?.criado_em||'');
+  const m=base.match(/^(\d{4}-\d{2}-\d{2})/);
+  return m?m[1]:dataHojePortalISO();
+}
+function chaveDocumentoPortal(reg){
+  return String(reg?.storage_path||reg?.public_url||reg?.arquivo_nome||'');
+}
+function atualizarListaAcessosPortal(acessos, novoAcesso){
+  const lista=Array.isArray(acessos)?[...acessos]:[];
+  const chave=novoAcesso.chave_documento;
+  const idx=lista.findIndex(a=>String(a.chave_documento||a.storage_path||'')===chave);
+  if(idx>=0){
+    const item={...lista[idx]};
+    const dias=Array.isArray(item.dias)?[...item.dias]:[];
+    if(!dias.includes(novoAcesso.data_abertura)) dias.push(novoAcesso.data_abertura);
+    item.dias=dias;
+    item.ultimo_acesso_em=novoAcesso.ultimo_acesso_em;
+    item.quantidade=(Number(item.quantidade)||0)+1;
+    item.arquivo_nome=novoAcesso.arquivo_nome;
+    item.storage_path=novoAcesso.storage_path;
+    item.public_url=novoAcesso.public_url;
+    item.data_documento=novoAcesso.data_documento;
+    lista[idx]=item;
+  }else{
+    lista.push({
+      chave_documento:novoAcesso.chave_documento,
+      arquivo_nome:novoAcesso.arquivo_nome,
+      storage_path:novoAcesso.storage_path,
+      public_url:novoAcesso.public_url,
+      categoria_label:novoAcesso.categoria_label,
+      data_documento:novoAcesso.data_documento,
+      dias:[novoAcesso.data_abertura],
+      primeiro_acesso_em:novoAcesso.ultimo_acesso_em,
+      ultimo_acesso_em:novoAcesso.ultimo_acesso_em,
+      quantidade:1
+    });
+  }
+  return lista;
+}
+async function registrarAcessoDocumentoPortal(tipo, reg, bucket){
+  if(!atletaLogado || !reg) return;
+  try{
+    const agora=new Date().toISOString();
+    const hoje=dataHojePortalISO();
+    const url=urlDocumentoPortal(reg,bucket);
+    const categoria=reg.categoria_id||'';
+    const chaveDoc=chaveDocumentoPortal(reg);
+    if(!chaveDoc) return;
+
+    const {data:existente,error:selectError}=await sb.from('portal_documentos_acessos')
+      .select('*')
+      .eq('nome_completo',atletaLogado.nomeCompleto)
+      .eq('nascimento',atletaLogado.nascimento)
+      .eq('tipo',tipo)
+      .eq('categoria_id',categoria)
+      .maybeSingle();
+    if(selectError){console.warn('Erro ao buscar acesso existente:',selectError);}
+
+    const novoAcesso={
+      chave_documento:chaveDoc,
+      arquivo_nome:reg.arquivo_nome||'',
+      storage_path:reg.storage_path||'',
+      public_url:url||'',
+      categoria_label:reg.categoria_label||'',
+      data_documento:dataDocumentoPortal(reg),
+      data_abertura:hoje,
+      ultimo_acesso_em:agora
+    };
+
+    const acessos=atualizarListaAcessosPortal(existente?.acessos,novoAcesso);
+    const payload={
+      nome_completo:atletaLogado.nomeCompleto,
+      nascimento:atletaLogado.nascimento,
+      ano:anoAtleta(atletaLogado.row),
+      tipo,
+      categoria_id:categoria,
+      categoria_label:reg.categoria_label||'',
+      acessos,
+      atualizado_em:agora
+    };
+
+    const {error}=await sb.from('portal_documentos_acessos').upsert(payload,{onConflict:'nome_completo,nascimento,tipo,categoria_id'});
+    if(error)console.warn('Não foi possível registrar abertura do documento:',error);
+  }catch(e){
+    console.warn('Não foi possível registrar abertura do documento:', e);
+  }
+}
 function abrirTrabalhoDiarioPortal(){
-  const url=urlDocumentoPortal(documentosPortalAtleta.trabalho,'trabalhos-diarios');
+  const reg=documentosPortalAtleta.trabalho;
+  const url=urlDocumentoPortal(reg,'trabalhos-diarios');
   if(!url)return alert('Nenhum trabalho diário disponível.');
   window.open(url,'_blank','noopener,noreferrer');
+  registrarAcessoDocumentoPortal('trabalho_diario', reg, 'trabalhos-diarios').then(()=>{
+    documentosPortalAtleta.trabalhoVisto=true;
+    aplicarEstadoBotaoDocumentoPortal('trabalho');
+  });
 }
 function abrirPlanejamentoSemanalPortal(){
-  const url=urlDocumentoPortal(documentosPortalAtleta.planejamento,'planejamentos-semanais');
+  const reg=documentosPortalAtleta.planejamento;
+  const url=urlDocumentoPortal(reg,'planejamentos-semanais');
   if(!url)return alert('Nenhum planejamento semanal disponível.');
   window.open(url,'_blank','noopener,noreferrer');
+  registrarAcessoDocumentoPortal('planejamento_semanal', reg, 'planejamentos-semanais').then(()=>{
+    documentosPortalAtleta.planejamentoVisto=true;
+    aplicarEstadoBotaoDocumentoPortal('planejamento');
+  });
 }
 function mostrarFicha(row){document.getElementById('login-screen').classList.remove('active');document.getElementById('ficha-screen').classList.add('active');atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();document.getElementById('portal-atleta-logado').textContent=apelido(row);const avals=avaliacoesAtleta(row);const resumo=avals.length?`<div class="section-title">Resumo da Última Avaliação</div><div class="resumo-grid">${card('Peso','peso',avals,' Kg',false,null,'sem-cor')}${card('Altura','altura',avals,' m',false,null,'sem-cor')}${card('Alt. Predita','predita',avals,' m',false,null,'sem-cor')}${card('% Gordura','gordura',avals,'',true,row)}${card('Resistência','distancia',avals,' m',false,row)}${card('Potência','salto',avals,' m',false,row)}${card('Aceleração','aceleracao',avals,' s',true,row)}${card('Velocidade','velocidade',avals,' s',true,row)}${card('Agilidade','agilidade',avals,' s',true,row)}</div><div class="section-title">Comparativo das Avaliações</div><div class="comp-wrap"><table class="comparativo"><thead><tr><th>Data</th><th>Peso</th><th>Altura</th><th>Gordura</th><th>Dist.</th><th>Salto</th><th>Acel.</th><th>Veloc.</th><th>Agil.</th></tr></thead><tbody>${avals.map(a=>`<tr><td>${escapeHTML(a.data)}</td><td>${escapeHTML(a.peso)}</td><td>${escapeHTML(a.altura)}</td><td>${escapeHTML(a.gordura)}</td><td>${escapeHTML(a.distancia)}</td><td>${escapeHTML(a.salto)}</td><td>${escapeHTML(a.aceleracao)}</td><td>${escapeHTML(a.velocidade)}</td><td>${escapeHTML(a.agilidade)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aviso">Nenhuma avaliação física encontrada.</div>';document.getElementById('ficha-container').innerHTML=`<div class="ficha-wrap"><div class="foto-area"><img src="${foto(row)}" onerror="this.src='logo.png'" alt="${escapeHTML(nomeCompleto(row))}"></div><div class="dados-area"><h1 class="apelido">${escapeHTML(apelido(row))}</h1><div class="nome-completo">${escapeHTML(nomeCompleto(row))}</div><div class="info-grid"><p><strong>Ano:</strong> ${escapeHTML(anoAtleta(row))}</p><p><strong>Nascimento:</strong> ${escapeHTML(nascimento(row))}</p><p><strong>Posição:</strong> ${escapeHTML(posicao(row))}</p><p><strong>Cidade:</strong> ${escapeHTML(cidade(row))}</p></div>${resumo}</div></div>`;}
 function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';}
