@@ -288,3 +288,36 @@ button.portal-sair-btn{
   .login-portal-title{font-size:24px;margin-bottom:12px;}
   .login-credit{font-size:9px;margin-top:11px;}
 }
+
+
+/* Botões de Trabalho Diário e Planejamento Semanal no Portal do Atleta */
+.portal-documentos-buttons{
+  position:fixed;
+  left:10px;
+  bottom:42px;
+  z-index:10045;
+  display:none;
+  flex-direction:column;
+  gap:7px;
+  align-items:flex-start;
+}
+.portal-documentos-buttons button{
+  border:1px solid #f9c614;
+  background:#58111a;
+  color:#fff;
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:11px;
+  font-weight:900;
+  box-shadow:0 4px 12px rgba(0,0,0,.28);
+  cursor:pointer;
+  max-width:150px;
+  line-height:1.05;
+}
+.portal-documentos-buttons button:hover{background:#7b112a;}
+#portal-btn-trabalho{background:#0984e3;border-color:#fff;}
+#portal-btn-planejamento{background:#27ae60;border-color:#fff;}
+@media(max-width:760px){
+  .portal-documentos-buttons{left:8px;bottom:34px;gap:6px;}
+  .portal-documentos-buttons button{font-size:9.5px;padding:7px 9px;max-width:118px;}
+}
