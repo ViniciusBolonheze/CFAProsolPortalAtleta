@@ -266,8 +266,13 @@ function urlDocumentoPortal(reg,bucket){
   return '';
 }
 function dataDocumentoPortal(reg){
+  // Usa a data de referência salva pelo Sistema Principal.
+  // Assim, abrir o PDF em outro dia continua contando para o dia/semana correta do treino.
+  const referencia=String(reg?.data_referencia||'');
+  let m=referencia.match(/^(\d{4}-\d{2}-\d{2})/);
+  if(m)return m[1];
   const base=String(reg?.atualizado_em||reg?.criado_em||'');
-  const m=base.match(/^(\d{4}-\d{2}-\d{2})/);
+  m=base.match(/^(\d{4}-\d{2}-\d{2})/);
   return m?m[1]:dataHojePortalISO();
 }
 function chaveDocumentoPortal(reg){
@@ -288,6 +293,7 @@ function atualizarListaAcessosPortal(acessos, novoAcesso){
     item.storage_path=novoAcesso.storage_path;
     item.public_url=novoAcesso.public_url;
     item.data_documento=novoAcesso.data_documento;
+    item.data_referencia=novoAcesso.data_referencia||novoAcesso.data_documento;
     lista[idx]=item;
   }else{
     lista.push({
@@ -297,6 +303,7 @@ function atualizarListaAcessosPortal(acessos, novoAcesso){
       public_url:novoAcesso.public_url,
       categoria_label:novoAcesso.categoria_label,
       data_documento:novoAcesso.data_documento,
+      data_referencia:novoAcesso.data_referencia||novoAcesso.data_documento,
       dias:[novoAcesso.data_abertura],
       primeiro_acesso_em:novoAcesso.ultimo_acesso_em,
       ultimo_acesso_em:novoAcesso.ultimo_acesso_em,
@@ -309,7 +316,7 @@ async function registrarAcessoDocumentoPortal(tipo, reg, bucket){
   if(!atletaLogado || !reg) return;
   try{
     const agora=new Date().toISOString();
-    const hoje=dataHojePortalISO();
+    const dataReferenciaDocumento=dataDocumentoPortal(reg);
     const url=urlDocumentoPortal(reg,bucket);
     const categoria=reg.categoria_id||'';
     const chaveDoc=chaveDocumentoPortal(reg);
@@ -330,8 +337,9 @@ async function registrarAcessoDocumentoPortal(tipo, reg, bucket){
       storage_path:reg.storage_path||'',
       public_url:url||'',
       categoria_label:reg.categoria_label||'',
-      data_documento:dataDocumentoPortal(reg),
-      data_abertura:hoje,
+      data_documento:dataReferenciaDocumento,
+      data_referencia:dataReferenciaDocumento,
+      data_abertura:dataReferenciaDocumento,
       ultimo_acesso_em:agora
     };
 
