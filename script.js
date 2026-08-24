@@ -1,8 +1,9 @@
 const SUPABASE_URL = 'https://jrudgjopfxfyyhnvgidz.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_VScGEvhYLgQSDGll2IQIsw_bsTQXRCO';
 const SENHA_RECUPERACAO_PADRAO = 'blucxj';
-const SENHA_COORDENACAO_PADRAO = 'blucxj123';
+const SENHA_COORDENACAO_PADRAO = 'cfaprosol2023';
 const TEMPO_INATIVIDADE_PORTAL = 5 * 60 * 1000;
+const PORTAL_LOGIN_PERSIST_KEY = 'portal_atleta_login_salvo_v1';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let atletasBanco = [];
@@ -97,6 +98,45 @@ function iniciarInatividadePortal(){
   setInterval(atualizarRelogioInatividadePortal,1000);
 }
 
+function portalManterConectadoMarcado(){return !!document.getElementById('login-manter-conectado')?.checked;}
+function portalSalvarLoginLocal(row, senha){
+  if(!row||!senha)return;
+  try{
+    localStorage.setItem(PORTAL_LOGIN_PERSIST_KEY, JSON.stringify({
+      nomeCompleto:nomeCompleto(row),
+      nascimento:nascimento(row),
+      ano:anoAtleta(row),
+      senha,
+      salvo_em:new Date().toISOString()
+    }));
+  }catch(e){console.warn('Não foi possível salvar login neste aparelho:',e);}
+}
+function portalLimparLoginLocal(){try{localStorage.removeItem(PORTAL_LOGIN_PERSIST_KEY);}catch(e){}}
+function portalLoginLocalSalvo(){try{return JSON.parse(localStorage.getItem(PORTAL_LOGIN_PERSIST_KEY)||'null');}catch(e){return null;}}
+function portalSelecionarAtletaNoLogin(row){
+  if(!row)return;
+  const ano=anoAtleta(row);
+  const anoSelect=document.getElementById('login-ano');
+  if(anoSelect){anoSelect.value=ano;preencherAtletas();}
+  const atletaSelect=document.getElementById('login-atleta');
+  if(atletaSelect)atletaSelect.value=chaveAtleta(row);
+}
+async function tentarLoginLocalSalvo(){
+  const salvo=portalLoginLocalSalvo();
+  if(!salvo||!salvo.nomeCompleto||!salvo.nascimento||!salvo.senha)return false;
+  const row=atletasBanco.find(r=>nomeCompleto(r)===salvo.nomeCompleto&&nascimento(r)===salvo.nascimento);
+  if(!row){portalLimparLoginLocal();return false;}
+  portalSelecionarAtletaNoLogin(row);
+  const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=true;
+  msgLogin('Entrando automaticamente...');
+  try{
+    const {data,error}=await sb.from('portal_atletas_acesso').select('*').eq('nome_completo',salvo.nomeCompleto).eq('nascimento',salvo.nascimento).maybeSingle();
+    if(error||!data||data.ativo===false||data.senha!==salvo.senha){portalLimparLoginLocal();msgLogin('');return false;}
+    atletaLogado={nomeCompleto:salvo.nomeCompleto,nascimento:salvo.nascimento,row,coordenacao:false};
+    mostrarFicha(row);
+    return true;
+  }catch(e){console.warn('Erro ao restaurar login salvo:',e);msgLogin('');return false;}
+}
 async function carregarAtletas(){msgLogin('Carregando atletas...');const {data,error}=await sb.from('sistema_config').select('dados').eq('chave','principal').single();if(error||!data){msgLogin('Erro ao carregar banco de atletas.');return}atletasBanco=(data.dados||[]).filter(r=>nomeCompleto(r)&&nascimento(r)).sort((a,b)=>anoAtleta(a).localeCompare(anoAtleta(b))||apelido(a).localeCompare(apelido(b),'pt-BR'));preencherAnos();preencherAtletas();msgLogin('');}
 function preencherAnos(){const anos=[...new Set(atletasBanco.map(anoAtleta).filter(Boolean))].sort();document.getElementById('login-ano').innerHTML='<option value="">Todos os anos</option>'+anos.map(a=>`<option>${a}</option>`).join('');document.getElementById('login-ano').onchange=preencherAtletas;}
 function preencherAtletas(){const ano=document.getElementById('login-ano').value;const lista=atletasBanco.filter(r=>!ano||anoAtleta(r)===ano);document.getElementById('login-atleta').innerHTML=lista.map(r=>`<option value="${escapeHTML(chaveAtleta(r))}">${escapeHTML(apelido(r))} - ${escapeHTML(anoAtleta(r))}</option>`).join('');}
@@ -108,9 +148,11 @@ async function entrarPortalAtleta(){
   const row=atletasBanco.find(r=>chaveAtleta(r)===chave);
   if(!row)return msgLogin('Atleta não encontrado.');
   const nome=nomeCompleto(row), nasc=nascimento(row);
+  let senhaParaSalvar=senha;
 
-  // Senha da coordenação: entra em qualquer atleta sem criar/alterar cadastro.
+  // Senha da coordenação: entra em qualquer atleta sem criar/alterar cadastro e não fica salva no aparelho.
   if(senha === SENHA_COORDENACAO_PADRAO){
+    portalLimparLoginLocal();
     atletaLogado={nomeCompleto:nome,nascimento:nasc,row,coordenacao:true};
     mostrarFicha(row);
     return;
@@ -131,9 +173,12 @@ async function entrarPortalAtleta(){
       const nova=prompt('Senha de recuperação aceita. Digite uma nova senha:');
       if(!nova||nova.length<4){msgLogin('Nova senha inválida.');return}
       await sb.from('portal_atletas_acesso').update({senha:nova,primeiro_acesso:false,atualizado_em:new Date().toISOString()}).eq('nome_completo',nome).eq('nascimento',nasc);
+      senhaParaSalvar=nova;
     }else{msgLogin('Senha incorreta.');return}
   }
 
+  if(portalManterConectadoMarcado()) portalSalvarLoginLocal(row, senhaParaSalvar);
+  else portalLimparLoginLocal();
   atletaLogado={nomeCompleto:nome,nascimento:nasc,row,coordenacao:false};
   mostrarFicha(row);
 }
@@ -403,9 +448,9 @@ function abrirPlanejamentoSemanalPortal(){
   });
 }
 function mostrarFicha(row){document.getElementById('login-screen').classList.remove('active');document.getElementById('ficha-screen').classList.add('active');atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();document.getElementById('portal-atleta-logado').textContent=apelido(row);const avals=avaliacoesAtleta(row);const resumo=avals.length?`<div class="section-title">Resumo da Última Avaliação</div><div class="resumo-grid">${card('Peso','peso',avals,' Kg',false,null,'sem-cor')}${card('Altura','altura',avals,' m',false,null,'sem-cor')}${card('Alt. Predita','predita',avals,' m',false,null,'sem-cor')}${card('% Gordura','gordura',avals,'',true,row)}${card('Resistência','distancia',avals,' m',false,row)}${card('Potência','salto',avals,' m',false,row)}${card('Aceleração','aceleracao',avals,' s',true,row)}${card('Velocidade','velocidade',avals,' s',true,row)}${card('Agilidade','agilidade',avals,' s',true,row)}</div><div class="section-title">Comparativo das Avaliações</div><div class="comp-wrap"><table class="comparativo"><thead><tr><th>Data</th><th>Peso</th><th>Altura</th><th>Gordura</th><th>Dist.</th><th>Salto</th><th>Acel.</th><th>Veloc.</th><th>Agil.</th></tr></thead><tbody>${avals.map(a=>`<tr><td>${escapeHTML(a.data)}</td><td>${escapeHTML(a.peso)}</td><td>${escapeHTML(a.altura)}</td><td>${escapeHTML(a.gordura)}</td><td>${escapeHTML(a.distancia)}</td><td>${escapeHTML(a.salto)}</td><td>${escapeHTML(a.aceleracao)}</td><td>${escapeHTML(a.velocidade)}</td><td>${escapeHTML(a.agilidade)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aviso">Nenhuma avaliação física encontrada.</div>';document.getElementById('ficha-container').innerHTML=`<div class="ficha-wrap"><div class="foto-area"><img src="${foto(row)}" onerror="this.src='logo.png'" alt="${escapeHTML(nomeCompleto(row))}"></div><div class="dados-area"><h1 class="apelido">${escapeHTML(apelido(row))}</h1><div class="nome-completo">${escapeHTML(nomeCompleto(row))}</div><div class="info-grid"><p><strong>Ano:</strong> ${escapeHTML(anoAtleta(row))}</p><p><strong>Nascimento:</strong> ${escapeHTML(nascimento(row))}</p><p><strong>Posição:</strong> ${escapeHTML(posicao(row))}</p><p><strong>Cidade:</strong> ${escapeHTML(cidade(row))}</p></div>${resumo}</div></div>`;}
-function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';}
+function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=false;}
 async function tentarRestaurarSessao(){const s=sessionStorage.getItem('portal_atleta_logado');if(!s)return;try{const obj=JSON.parse(s);const row=atletasBanco.find(r=>nomeCompleto(r)===obj.nomeCompleto&&nascimento(r)===obj.nascimento);if(row)mostrarFicha(row);}catch(e){}}
-window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');iniciarInatividadePortal();await carregarAtletas();});
+window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');iniciarInatividadePortal();await carregarAtletas();await tentarLoginLocalSalvo();});
 
 
 /* === PSR / PSE - Relatório diário do atleta === */
