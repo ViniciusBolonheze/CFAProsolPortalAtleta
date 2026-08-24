@@ -359,3 +359,117 @@ button.portal-sair-btn{
 }
 #portal-btn-trabalho.documento-novo{background:#0984e3!important;}
 #portal-btn-planejamento.documento-novo{background:#27ae60!important;}
+
+/* ===== Portal Atleta: botões importantes reorganizados no celular ===== */
+.portal-action-buttons button,
+.portal-documentos-buttons button{
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  white-space:normal;
+}
+.portal-action-buttons button.questionario-pendente{
+  opacity:1;
+  filter:none;
+  box-shadow:0 5px 16px rgba(0,0,0,.32),0 0 0 3px rgba(249,198,20,.25)!important;
+}
+.portal-action-buttons button.questionario-enviado{
+  opacity:.46!important;
+  filter:saturate(.65) grayscale(.25)!important;
+  background:#6f7782!important;
+  border-color:rgba(255,255,255,.6)!important;
+  color:#fff!important;
+  box-shadow:0 2px 8px rgba(0,0,0,.16)!important;
+}
+.portal-documentos-buttons button.documento-visto{
+  opacity:.46!important;
+}
+@media(max-width:760px){
+  #ficha-screen.active{
+    padding-bottom:178px!important;
+  }
+  #ficha-container{
+    padding-bottom:178px!important;
+  }
+  .ficha-wrap{
+    margin-bottom:22px!important;
+  }
+  .portal-action-panel{
+    top:auto!important;
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 94px)!important;
+    width:auto!important;
+    max-width:none!important;
+    align-items:stretch!important;
+    gap:0!important;
+    pointer-events:none;
+    z-index:10070!important;
+  }
+  .portal-action-buttons{
+    width:100%!important;
+    display:flex!important;
+    flex-direction:row!important;
+    gap:10px!important;
+    align-items:stretch!important;
+    justify-content:center!important;
+    pointer-events:auto;
+  }
+  .portal-action-buttons button{
+    flex:1 1 0!important;
+    min-width:0!important;
+    width:auto!important;
+    height:54px!important;
+    min-height:54px!important;
+    padding:8px 12px!important;
+    border-radius:18px!important;
+    border:2px solid #f9c614!important;
+    background:#58111a;
+    color:#fff;
+    font-size:18px!important;
+    font-weight:950!important;
+    line-height:1!important;
+    display:inline-flex;
+    box-shadow:0 8px 22px rgba(0,0,0,.30)!important;
+  }
+  .portal-documentos-buttons{
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 14px)!important;
+    width:auto!important;
+    max-width:none!important;
+    flex-direction:row!important;
+    align-items:stretch!important;
+    justify-content:center!important;
+    gap:10px!important;
+    z-index:10065!important;
+  }
+  .portal-documentos-buttons button{
+    flex:1 1 0!important;
+    width:auto!important;
+    max-width:none!important;
+    min-width:0!important;
+    min-height:60px!important;
+    padding:9px 12px!important;
+    border-radius:18px!important;
+    border:2px solid rgba(255,255,255,.9)!important;
+    font-size:13px!important;
+    font-weight:950!important;
+    line-height:1.15!important;
+    display:inline-flex;
+    box-shadow:0 8px 22px rgba(0,0,0,.28)!important;
+  }
+  #portal-btn-trabalho{background:#0984e3!important;}
+  #portal-btn-planejamento{background:#27ae60!important;}
+  #portal-btn-trabalho.documento-visto,
+  #portal-btn-planejamento.documento-visto{
+    background:#6f7782!important;
+    border-color:rgba(255,255,255,.55)!important;
+  }
+}
+@media(max-width:390px){
+  .portal-action-buttons button{height:50px!important;min-height:50px!important;font-size:16px!important;border-radius:16px!important;}
+  .portal-documentos-buttons button{min-height:54px!important;font-size:12px!important;border-radius:16px!important;padding:8px 9px!important;}
+  .portal-action-panel{bottom:calc(env(safe-area-inset-bottom,0px) + 86px)!important;}
+  #ficha-screen.active,#ficha-container{padding-bottom:166px!important;}
+}

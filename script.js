@@ -149,7 +149,22 @@ function portalDentroHorario(tipo){
   if(tipo==='pse')return hora>=16&&hora<23;
   return false;
 }
-function atualizarBotoesQuestionariosPortal(){
+function respostaQuestionarioPreenchidaPortal(tipo,resposta){
+  const obj=resposta&&resposta[tipo];
+  if(!obj||typeof obj!=='object')return false;
+  if(obj.preenchido_em)return true;
+  if(tipo==='psr'){
+    return ['sono','fadiga','dor_muscular','estresse_mental','motivacao'].every(k=>obj[k]!==undefined&&obj[k]!==null&&obj[k]!=='');
+  }
+  return obj.valor!==undefined&&obj.valor!==null&&obj.valor!=='';
+}
+function aplicarEstadoQuestionarioPortal(botao,enviado,tituloNovo,tituloEnviado){
+  if(!botao)return;
+  botao.classList.remove('questionario-pendente','questionario-enviado');
+  botao.classList.add(enviado?'questionario-enviado':'questionario-pendente');
+  botao.title=enviado?tituloEnviado:tituloNovo;
+}
+async function atualizarBotoesQuestionariosPortal(){
   const panel=document.getElementById('portal-action-panel');
   const psrBtn=document.getElementById('portal-btn-psr');
   const pseBtn=document.getElementById('portal-btn-pse');
@@ -158,6 +173,8 @@ function atualizarBotoesQuestionariosPortal(){
   if(!atletaLogado){
     panel.style.display='none';
     if(info)info.style.display='none';
+    aplicarEstadoQuestionarioPortal(psrBtn,false,'Percepção Subjetiva de Recuperação','PSR já enviado hoje');
+    aplicarEstadoQuestionarioPortal(pseBtn,false,'Percepção Subjetiva de Esforço','PSE já enviado hoje');
     return;
   }
   const podePSR=portalDentroHorario('psr');
@@ -171,6 +188,10 @@ function atualizarBotoesQuestionariosPortal(){
       ? 'Coordenação: PSR e PSE liberados'
       : 'PSR - 06:00 as 15:00  PSE: 16:00 as 23:00';
   }
+  let respostaHoje=null;
+  try{respostaHoje=await buscarRespostaDiariaPortal(dataHojePortalISO());}catch(e){console.warn('Não foi possível verificar PSR/PSE enviados:',e);}
+  aplicarEstadoQuestionarioPortal(psrBtn,respostaQuestionarioPreenchidaPortal('psr',respostaHoje),'Preencher PSR','PSR já enviado hoje');
+  aplicarEstadoQuestionarioPortal(pseBtn,respostaQuestionarioPreenchidaPortal('pse',respostaHoje),'Preencher PSE','PSE já enviado hoje');
 }
 function normalizarPortalDocumento(v){return String(v||'').trim().replace(/\s+/g,' ');}
 function registroTemArquivoPortal(reg){return !!(reg && (reg.public_url || reg.storage_path));}
@@ -495,6 +516,7 @@ async function salvarPSRPortal(){
   };
   if(await salvarRespostaDiariaPortal('psr',valor)){
     document.getElementById('portal-diario-msg').textContent='PSR salvo com sucesso.';
+    atualizarBotoesQuestionariosPortal();
     setTimeout(fecharModalDiario,650);
   }
 }
@@ -517,6 +539,7 @@ async function salvarPSEPortal(){
   const valor={valor:Number(sel.value),descricao:textos[Number(sel.value)]||'',preenchido_em:new Date().toISOString()};
   if(await salvarRespostaDiariaPortal('pse',valor)){
     document.getElementById('portal-diario-msg').textContent='PSE salvo com sucesso.';
+    atualizarBotoesQuestionariosPortal();
     setTimeout(fecharModalDiario,650);
   }
 }
