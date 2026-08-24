@@ -539,3 +539,307 @@ button.portal-sair-btn{
 @media(max-width:460px){
   .login-remember{font-size:11px;margin-top:0;margin-bottom:12px;}
 }
+
+/* ===== Portal Atleta: Informações técnicas dos goleiros ===== */
+.portal-goleiro-button{
+  position:fixed;
+  left:10px;
+  bottom:132px;
+  z-index:10046;
+  display:none;
+  align-items:flex-start;
+}
+.portal-goleiro-button button{
+  border:2px solid #f9c614;
+  background:linear-gradient(135deg,#58111a,#8a1430);
+  color:#f9c614;
+  border-radius:999px;
+  padding:10px 16px;
+  font-size:12px;
+  font-weight:950;
+  box-shadow:0 5px 16px rgba(0,0,0,.30),0 0 0 3px rgba(249,198,20,.18);
+  cursor:pointer;
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.portal-goleiro-button button:hover{filter:brightness(1.06);}
+.portal-goleiro-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.72);
+  z-index:21000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.portal-goleiro-card{
+  position:relative;
+  width:min(560px,94vw);
+  max-height:92vh;
+  overflow:auto;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 18px 50px rgba(0,0,0,.45);
+  border-top:8px solid #58111a;
+}
+.portal-goleiro-close{
+  position:absolute;
+  right:12px;
+  top:10px;
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:50%;
+  background:#58111a;
+  color:#fff;
+  font-size:22px;
+  font-weight:900;
+  cursor:pointer;
+}
+.portal-goleiro-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:20px 22px 14px;
+  background:linear-gradient(135deg,#58111a,#8a1430);
+  color:#fff;
+}
+.portal-goleiro-head img{width:48px;height:48px;object-fit:contain;}
+.portal-goleiro-head h2{margin:0;color:#f9c614;font-size:26px;font-weight:950;}
+.portal-goleiro-head p{margin:2px 0 0;color:#fff;font-weight:800;font-size:13px;}
+.portal-goleiro-player{padding:16px 22px 10px;border-bottom:1px solid #eee;}
+.portal-goleiro-player strong{display:block;color:#b30000;font-size:22px;font-weight:950;text-transform:uppercase;}
+.portal-goleiro-player span{display:block;color:#58111a;font-size:13px;font-weight:850;margin-top:3px;}
+.portal-goleiro-player small{display:block;color:#777;font-size:11px;font-weight:750;margin-top:5px;}
+.portal-goleiro-text{
+  margin:16px 22px 22px;
+  padding:16px;
+  border-radius:14px;
+  background:#fff8dc;
+  border:1px solid #f1c40f;
+  color:#2b2b2b;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.48;
+  white-space:normal;
+}
+@media(max-width:760px){
+  body.portal-tem-goleiro-info #ficha-screen.active,
+  body.portal-tem-goleiro-info #ficha-container{
+    padding-bottom:238px!important;
+  }
+  .portal-goleiro-button{
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(env(safe-area-inset-bottom,0px) + 164px)!important;
+    width:auto!important;
+    justify-content:center;
+    z-index:10068!important;
+  }
+  .portal-goleiro-button button{
+    width:100%!important;
+    min-height:52px!important;
+    border-radius:18px!important;
+    font-size:15px!important;
+  }
+  .portal-goleiro-card{width:96vw;max-height:90vh;}
+  .portal-goleiro-head{padding:18px;}
+  .portal-goleiro-head h2{font-size:23px;}
+  .portal-goleiro-player{padding:14px 18px 8px;}
+  .portal-goleiro-text{margin:14px 18px 18px;font-size:13px;}
+}
+@media(max-width:390px){
+  body.portal-tem-goleiro-info #ficha-screen.active,
+  body.portal-tem-goleiro-info #ficha-container{padding-bottom:222px!important;}
+  .portal-goleiro-button{bottom:calc(env(safe-area-inset-bottom,0px) + 148px)!important;}
+  .portal-goleiro-button button{min-height:48px!important;font-size:14px!important;}
+}
+
+/* ===== Portal Atleta: Goleiros inline + Preparação Física ===== */
+.portal-goleiro-button{display:none!important;}
+.portal-goleiro-inline-card{
+  margin:14px 0 16px;
+  padding:14px;
+  border-radius:14px;
+  background:#fff8dc;
+  border:1px solid #f1c40f;
+  border-left:6px solid #58111a;
+  box-shadow:0 4px 12px rgba(0,0,0,.07);
+}
+.portal-goleiro-inline-card strong{
+  display:block;
+  color:#58111a;
+  font-size:14px;
+  font-weight:950;
+  text-transform:uppercase;
+  margin-bottom:3px;
+}
+.portal-goleiro-inline-card small{
+  display:block;
+  color:#777;
+  font-size:10px;
+  font-weight:800;
+  margin-bottom:8px;
+}
+.portal-goleiro-inline-card p{
+  margin:0;
+  color:#2b2b2b;
+  font-size:13px;
+  font-weight:700;
+  line-height:1.42;
+}
+.preparacao-fisica-area{
+  margin:18px 0 0;
+  display:grid;
+  gap:10px;
+}
+.preparacao-fisica-btn{
+  width:100%;
+  border:0;
+  border-radius:10px;
+  background:linear-gradient(135deg,#58111a,#8a1430);
+  color:#f9c614;
+  padding:13px 16px;
+  font-size:14px;
+  font-weight:950;
+  cursor:pointer;
+  box-shadow:0 8px 18px rgba(88,17,26,.22);
+}
+.preparacao-fisica-btn:hover{filter:brightness(1.06);}
+.preparacao-resposta-card{
+  border:1px solid #bbf7d0;
+  border-left:6px solid #16a34a;
+  background:#f0fff5;
+  border-radius:12px;
+  padding:12px;
+}
+.preparacao-resposta-card strong{display:block;color:#145a32;font-size:13px;font-weight:950;margin-bottom:6px;}
+.preparacao-resposta-card p{margin:0;color:#123b22;font-size:13px;font-weight:700;line-height:1.4;}
+.preparacao-resposta-card small{display:block;color:#47745a;font-size:10px;font-weight:800;margin-top:7px;}
+.portal-preparacao-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.72);
+  z-index:21000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.portal-preparacao-card{
+  position:relative;
+  width:min(600px,94vw);
+  max-height:92vh;
+  overflow:auto;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 18px 50px rgba(0,0,0,.45);
+  border-top:8px solid #58111a;
+}
+.portal-preparacao-close{
+  position:absolute;
+  right:12px;
+  top:10px;
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:50%;
+  background:#58111a;
+  color:#fff;
+  font-size:22px;
+  font-weight:900;
+  cursor:pointer;
+}
+.portal-preparacao-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:20px 22px 14px;
+  background:linear-gradient(135deg,#58111a,#8a1430);
+  color:#fff;
+}
+.portal-preparacao-head img{width:48px;height:48px;object-fit:contain;}
+.portal-preparacao-head h2{margin:0;color:#f9c614;font-size:24px;font-weight:950;}
+.portal-preparacao-head p{margin:2px 0 0;color:#fff;font-weight:800;font-size:12px;line-height:1.25;}
+.portal-preparacao-body{padding:18px 22px 22px;}
+.portal-preparacao-body label{display:block;color:#58111a;font-size:13px;font-weight:950;margin-bottom:8px;}
+.portal-preparacao-body textarea{
+  width:100%;
+  min-height:150px;
+  resize:vertical;
+  border:1px solid #d7dce2;
+  border-radius:14px;
+  padding:12px;
+  font-size:14px;
+  line-height:1.4;
+  outline:none;
+  background:#fbfcff;
+}
+.portal-preparacao-body textarea:focus{border-color:#f9c614;box-shadow:0 0 0 4px rgba(249,198,20,.20);}
+.portal-preparacao-body button{
+  width:100%;
+  margin-top:12px;
+  border:0;
+  border-radius:10px;
+  background:linear-gradient(135deg,#58111a,#8a1430);
+  color:#f9c614;
+  padding:12px 16px;
+  font-size:14px;
+  font-weight:950;
+  cursor:pointer;
+}
+.portal-preparacao-body button:disabled{opacity:.6;cursor:wait;}
+.preparacao-modal-resposta{background:#f0fff5;border:1px solid #bbf7d0;border-radius:12px;padding:11px;margin-bottom:14px;}
+.preparacao-modal-resposta strong{display:block;color:#145a32;font-size:13px;margin-bottom:5px;}
+.preparacao-modal-resposta p{margin:0;color:#123b22;font-size:13px;line-height:1.4;font-weight:700;}
+@media(max-width:760px){
+  .preparacao-fisica-btn{font-size:13px;padding:12px 14px;}
+  .portal-goleiro-inline-card{padding:12px;}
+  .portal-preparacao-card{width:96vw;max-height:90vh;}
+  .portal-preparacao-head{padding:18px;}
+  .portal-preparacao-head h2{font-size:21px;}
+  .portal-preparacao-body{padding:16px 18px 18px;}
+}
+
+/* ===== Portal Atleta: múltiplas orientações da Preparação Física acima do resumo ===== */
+.preparacao-respostas-lista{
+  display:grid;
+  gap:10px;
+  margin:14px 0 16px;
+}
+.preparacao-resposta-card.principal{
+  border-left-color:#58111a;
+  background:#fff8dc;
+  border-color:#f1c40f;
+}
+.preparacao-resposta-card.principal strong{
+  color:#58111a;
+}
+.preparacao-resposta-meta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:7px;
+}
+.preparacao-resposta-meta small{
+  display:inline-flex!important;
+  margin-top:0!important;
+  background:rgba(255,255,255,.68);
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:999px;
+  padding:3px 8px;
+}
+.preparacao-modal-resposta p + p{
+  margin-top:7px!important;
+  padding-top:7px;
+  border-top:1px solid rgba(20,90,50,.15);
+}
+.preparacao-modal-resposta b{color:#145a32;}
+@media(max-width:760px){
+  .preparacao-respostas-lista{margin:12px 0 14px;}
+  .preparacao-resposta-meta{gap:6px;}
+}

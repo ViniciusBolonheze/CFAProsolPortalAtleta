@@ -9,6 +9,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let atletasBanco = [];
 let atletaLogado = null;
 let documentosPortalAtleta = { trabalho: null, planejamento: null };
+let goleiroInfoPortalAtleta = null;
 let inicioInatividadePortal = Date.now();
 let timerInatividadePortal = null;
 
@@ -447,8 +448,115 @@ function abrirPlanejamentoSemanalPortal(){
     aplicarEstadoBotaoDocumentoPortal('planejamento');
   });
 }
-function mostrarFicha(row){document.getElementById('login-screen').classList.remove('active');document.getElementById('ficha-screen').classList.add('active');atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();document.getElementById('portal-atleta-logado').textContent=apelido(row);const avals=avaliacoesAtleta(row);const resumo=avals.length?`<div class="section-title">Resumo da Última Avaliação</div><div class="resumo-grid">${card('Peso','peso',avals,' Kg',false,null,'sem-cor')}${card('Altura','altura',avals,' m',false,null,'sem-cor')}${card('Alt. Predita','predita',avals,' m',false,null,'sem-cor')}${card('% Gordura','gordura',avals,'',true,row)}${card('Resistência','distancia',avals,' m',false,row)}${card('Potência','salto',avals,' m',false,row)}${card('Aceleração','aceleracao',avals,' s',true,row)}${card('Velocidade','velocidade',avals,' s',true,row)}${card('Agilidade','agilidade',avals,' s',true,row)}</div><div class="section-title">Comparativo das Avaliações</div><div class="comp-wrap"><table class="comparativo"><thead><tr><th>Data</th><th>Peso</th><th>Altura</th><th>Gordura</th><th>Dist.</th><th>Salto</th><th>Acel.</th><th>Veloc.</th><th>Agil.</th></tr></thead><tbody>${avals.map(a=>`<tr><td>${escapeHTML(a.data)}</td><td>${escapeHTML(a.peso)}</td><td>${escapeHTML(a.altura)}</td><td>${escapeHTML(a.gordura)}</td><td>${escapeHTML(a.distancia)}</td><td>${escapeHTML(a.salto)}</td><td>${escapeHTML(a.aceleracao)}</td><td>${escapeHTML(a.velocidade)}</td><td>${escapeHTML(a.agilidade)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aviso">Nenhuma avaliação física encontrada.</div>';document.getElementById('ficha-container').innerHTML=`<div class="ficha-wrap"><div class="foto-area"><img src="${foto(row)}" onerror="this.src='logo.png'" alt="${escapeHTML(nomeCompleto(row))}"></div><div class="dados-area"><h1 class="apelido">${escapeHTML(apelido(row))}</h1><div class="nome-completo">${escapeHTML(nomeCompleto(row))}</div><div class="info-grid"><p><strong>Ano:</strong> ${escapeHTML(anoAtleta(row))}</p><p><strong>Nascimento:</strong> ${escapeHTML(nascimento(row))}</p><p><strong>Posição:</strong> ${escapeHTML(posicao(row))}</p><p><strong>Cidade:</strong> ${escapeHTML(cidade(row))}</p></div>${resumo}</div></div>`;}
-function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=false;}
+
+async function carregarGoleiroInfoPortalAtleta(){
+  goleiroInfoPortalAtleta=null;
+  const alvo=document.getElementById('portal-goleiro-info-inline');
+  if(alvo)alvo.innerHTML='';
+  if(!atletaLogado||!atletaLogado.nomeCompleto||!atletaLogado.nascimento)return;
+  try{
+    const {data,error}=await sb.from('goleiros_informacoes_tecnicas')
+      .select('*')
+      .eq('nome_completo',atletaLogado.nomeCompleto)
+      .eq('nascimento',atletaLogado.nascimento)
+      .maybeSingle();
+    if(error){console.warn('Informações de goleiro não carregadas:',error.message);return;}
+    const info=String(data?.informacoes_tecnicas||'').trim();
+    if(!data||!info){if(alvo)alvo.innerHTML='';return;}
+    goleiroInfoPortalAtleta=data;
+    renderGoleiroInfoInlinePortal();
+  }catch(e){console.warn('Erro ao carregar informações de goleiro:',e);}
+}
+function renderGoleiroInfoInlinePortal(){
+  const alvo=document.getElementById('portal-goleiro-info-inline');
+  if(!alvo)return;
+  const info=String(goleiroInfoPortalAtleta?.informacoes_tecnicas||'').trim();
+  if(!info){alvo.innerHTML='';return;}
+  const atualizado=goleiroInfoPortalAtleta.atualizado_em?new Date(goleiroInfoPortalAtleta.atualizado_em).toLocaleDateString('pt-BR'):'';
+  alvo.innerHTML=`<section class="portal-goleiro-inline-card"><div><strong>Informações técnicas de goleiro</strong>${atualizado?`<small>Atualizado em ${escapeHTML(atualizado)}</small>`:''}</div><p>${escapeHTML(info).replace(/\n/g,'<br>')}</p></section>`;
+}
+const PREPARACAO_FISICA_TABELA = 'portal_preparacao_fisica';
+let preparacaoFisicaRespostasAtuais = [];
+function preparacaoFisicaDataISO(){return dataHojePortalISO ? dataHojePortalISO() : new Date().toISOString().slice(0,10);}
+async function carregarRespostaPreparacaoFisicaPortal(){
+  preparacaoFisicaRespostasAtuais=[];
+  const alvo=document.getElementById('preparacao-fisica-resposta-inline');
+  if(alvo)alvo.innerHTML='';
+  if(!atletaLogado||!atletaLogado.nomeCompleto||!atletaLogado.nascimento)return;
+  try{
+    const hoje=preparacaoFisicaDataISO();
+    const {data,error}=await sb.from(PREPARACAO_FISICA_TABELA)
+      .select('*')
+      .eq('nome_completo',atletaLogado.nomeCompleto)
+      .eq('nascimento',atletaLogado.nascimento)
+      .gte('resposta_ate',hoje)
+      .order('atualizado_em',{ascending:false})
+      .limit(20);
+    if(error){console.warn('Resposta da preparação física não carregada:',error.message);return;}
+    preparacaoFisicaRespostasAtuais=(data||[]).filter(r=>String(r.resposta||'').trim());
+    renderRespostaPreparacaoFisicaPortal();
+  }catch(e){console.warn('Erro ao carregar resposta da preparação física:',e);}
+}
+function renderRespostaPreparacaoFisicaPortal(){
+  const alvo=document.getElementById('preparacao-fisica-resposta-inline');
+  if(!alvo)return;
+  const respostas=(preparacaoFisicaRespostasAtuais||[]).filter(r=>String(r.resposta||'').trim());
+  if(!respostas.length){alvo.innerHTML='';return;}
+  const cards=respostas.map((r,idx)=>{
+    const resposta=String(r.resposta||'').trim();
+    const ate=r.resposta_ate?String(r.resposta_ate).slice(0,10).split('-').reverse().join('/'):'';
+    const enviado=r.atualizado_em?new Date(r.atualizado_em).toLocaleDateString('pt-BR'):'';
+    return `<section class="preparacao-resposta-card ${idx===0?'principal':''}"><strong>${idx===0?'Orientação da Preparação Física':'Orientação anterior '+(idx+1)}</strong><p>${escapeHTML(resposta).replace(/\n/g,'<br>')}</p><div class="preparacao-resposta-meta">${enviado?`<small>Respondido em ${escapeHTML(enviado)}</small>`:''}${ate?`<small>Visível até ${escapeHTML(ate)}</small>`:''}</div></section>`;
+  }).join('');
+  alvo.innerHTML=`<div class="preparacao-respostas-lista">${cards}</div>`;
+}
+function criarModalPreparacaoFisicaPortal(){
+  let modal=document.getElementById('portal-preparacao-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='portal-preparacao-modal';
+    modal.className='portal-preparacao-overlay';
+    document.body.appendChild(modal);
+    modal.addEventListener('click',e=>{if(e.target===modal)fecharPreparacaoFisicaPortal();});
+  }
+  return modal;
+}
+function fecharPreparacaoFisicaPortal(){const modal=document.getElementById('portal-preparacao-modal');if(modal)modal.style.display='none';}
+function abrirPreparacaoFisicaPortal(){
+  if(!garantirAtletaLogado())return;
+  const modal=criarModalPreparacaoFisicaPortal();
+  const respostas=(preparacaoFisicaRespostasAtuais||[]).filter(r=>String(r.resposta||'').trim());
+  const respostaHtml=respostas.length?`<div class="preparacao-modal-resposta"><strong>Orientações atuais</strong>${respostas.map((r,i)=>`<p><b>${i+1}.</b> ${escapeHTML(String(r.resposta||'')).replace(/\n/g,'<br>')}</p>`).join('')}</div>`:'';
+  modal.innerHTML=`<div class="portal-preparacao-card"><button class="portal-preparacao-close" onclick="fecharPreparacaoFisicaPortal()">×</button><div class="portal-preparacao-head"><img src="logo.png" alt="CFA Prosol"><div><h2>Preparação Física</h2><p>Queixas de dores e observações para o preparador físico</p></div></div><div class="portal-preparacao-body">${respostaHtml}<label for="preparacao-queixa-texto">Descreva sua queixa de dor:</label><textarea id="preparacao-queixa-texto" placeholder="Ex: Estou com dor na coluna, joelho, posterior... Descreva quando começou e o que sente."></textarea><button onclick="salvarQueixaPreparacaoFisicaPortal()">Enviar para preparação física</button><div id="preparacao-fisica-msg" class="portal-diario-msg"></div></div></div>`;
+  modal.style.display='flex';
+}
+async function salvarQueixaPreparacaoFisicaPortal(){
+  if(!garantirAtletaLogado())return;
+  const texto=String(document.getElementById('preparacao-queixa-texto')?.value||'').trim();
+  const msg=document.getElementById('preparacao-fisica-msg');
+  if(!texto){if(msg)msg.textContent='Descreva a queixa antes de enviar.';return;}
+  const btn=document.querySelector('#portal-preparacao-modal .portal-preparacao-body button');
+  if(btn){btn.disabled=true;btn.textContent='Enviando...';}
+  const payload={
+    nome_completo:atletaLogado.nomeCompleto,
+    nascimento:atletaLogado.nascimento,
+    apelido:apelido(atletaLogado.row),
+    ano:anoAtleta(atletaLogado.row),
+    queixa:texto,
+    status:'pendente',
+    visto_atleta:false,
+    atualizado_em:new Date().toISOString()
+  };
+  try{
+    const {error}=await sb.from(PREPARACAO_FISICA_TABELA).insert(payload);
+    if(error)throw error;
+    if(msg)msg.textContent='Queixa enviada com sucesso.';
+    setTimeout(fecharPreparacaoFisicaPortal,700);
+  }catch(e){console.error(e);if(msg)msg.textContent='Erro ao enviar. Tente novamente.';}
+  finally{if(btn){btn.disabled=false;btn.textContent='Enviar para preparação física';}}
+}
+function mostrarFicha(row){document.getElementById('login-screen').classList.remove('active');document.getElementById('ficha-screen').classList.add('active');atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();setTimeout(()=>{carregarGoleiroInfoPortalAtleta();carregarRespostaPreparacaoFisicaPortal();},0);document.getElementById('portal-atleta-logado').textContent=apelido(row);const avals=avaliacoesAtleta(row);const resumo=avals.length?`<div class="section-title">Resumo da Última Avaliação</div><div class="resumo-grid">${card('Peso','peso',avals,' Kg',false,null,'sem-cor')}${card('Altura','altura',avals,' m',false,null,'sem-cor')}${card('Alt. Predita','predita',avals,' m',false,null,'sem-cor')}${card('% Gordura','gordura',avals,'',true,row)}${card('Resistência','distancia',avals,' m',false,row)}${card('Potência','salto',avals,' m',false,row)}${card('Aceleração','aceleracao',avals,' s',true,row)}${card('Velocidade','velocidade',avals,' s',true,row)}${card('Agilidade','agilidade',avals,' s',true,row)}</div><div class="section-title">Comparativo das Avaliações</div><div class="comp-wrap"><table class="comparativo"><thead><tr><th>Data</th><th>Peso</th><th>Altura</th><th>Gordura</th><th>Dist.</th><th>Salto</th><th>Acel.</th><th>Veloc.</th><th>Agil.</th></tr></thead><tbody>${avals.map(a=>`<tr><td>${escapeHTML(a.data)}</td><td>${escapeHTML(a.peso)}</td><td>${escapeHTML(a.altura)}</td><td>${escapeHTML(a.gordura)}</td><td>${escapeHTML(a.distancia)}</td><td>${escapeHTML(a.salto)}</td><td>${escapeHTML(a.aceleracao)}</td><td>${escapeHTML(a.velocidade)}</td><td>${escapeHTML(a.agilidade)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aviso">Nenhuma avaliação física encontrada.</div>';document.getElementById('ficha-container').innerHTML=`<div class="ficha-wrap"><div class="foto-area"><img src="${foto(row)}" onerror="this.src='logo.png'" alt="${escapeHTML(nomeCompleto(row))}"></div><div class="dados-area"><h1 class="apelido">${escapeHTML(apelido(row))}</h1><div class="nome-completo">${escapeHTML(nomeCompleto(row))}</div><div class="info-grid"><p><strong>Ano:</strong> ${escapeHTML(anoAtleta(row))}</p><p><strong>Nascimento:</strong> ${escapeHTML(nascimento(row))}</p><p><strong>Posição:</strong> ${escapeHTML(posicao(row))}</p><p><strong>Cidade:</strong> ${escapeHTML(cidade(row))}</p></div><div id="portal-goleiro-info-inline" class="portal-goleiro-inline"></div><div id="preparacao-fisica-resposta-inline"></div>${resumo}<div class="preparacao-fisica-area"><button type="button" class="preparacao-fisica-btn" onclick="abrirPreparacaoFisicaPortal()">Preparação Física</button></div></div></div>`;}
+function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';goleiroInfoPortalAtleta=null;preparacaoFisicaRespostasAtuais=[];fecharPreparacaoFisicaPortal();document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=false;}
 async function tentarRestaurarSessao(){const s=sessionStorage.getItem('portal_atleta_logado');if(!s)return;try{const obj=JSON.parse(s);const row=atletasBanco.find(r=>nomeCompleto(r)===obj.nomeCompleto&&nascimento(r)===obj.nascimento);if(row)mostrarFicha(row);}catch(e){}}
 window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');iniciarInatividadePortal();await carregarAtletas();await tentarLoginLocalSalvo();});
 
