@@ -461,8 +461,9 @@ async function carregarGoleiroInfoPortalAtleta(){
       .eq('nascimento',atletaLogado.nascimento)
       .maybeSingle();
     if(error){console.warn('Informações de goleiro não carregadas:',error.message);return;}
-    const info=String(data?.informacoes_tecnicas||'').trim();
-    if(!data||!info){if(alvo)alvo.innerHTML='';return;}
+    const infoTecnica=String(data?.informacoes_tecnicas||'').trim();
+    const infoJogo=String(data?.informacoes_jogo||'').trim();
+    if(!data||(!infoTecnica&&!infoJogo)){if(alvo)alvo.innerHTML='';return;}
     goleiroInfoPortalAtleta=data;
     renderGoleiroInfoInlinePortal();
   }catch(e){console.warn('Erro ao carregar informações de goleiro:',e);}
@@ -470,10 +471,13 @@ async function carregarGoleiroInfoPortalAtleta(){
 function renderGoleiroInfoInlinePortal(){
   const alvo=document.getElementById('portal-goleiro-info-inline');
   if(!alvo)return;
-  const info=String(goleiroInfoPortalAtleta?.informacoes_tecnicas||'').trim();
-  if(!info){alvo.innerHTML='';return;}
+  const infoTecnica=String(goleiroInfoPortalAtleta?.informacoes_tecnicas||'').trim();
+  const infoJogo=String(goleiroInfoPortalAtleta?.informacoes_jogo||'').trim();
+  if(!infoTecnica&&!infoJogo){alvo.innerHTML='';return;}
   const atualizado=goleiroInfoPortalAtleta.atualizado_em?new Date(goleiroInfoPortalAtleta.atualizado_em).toLocaleDateString('pt-BR'):'';
-  alvo.innerHTML=`<section class="portal-goleiro-inline-card"><div><strong>Informações técnicas de goleiro</strong>${atualizado?`<small>Atualizado em ${escapeHTML(atualizado)}</small>`:''}</div><p>${escapeHTML(info).replace(/\n/g,'<br>')}</p></section>`;
+  const blocoTecnica=infoTecnica?`<div class="portal-goleiro-info-bloco"><b>Informações Técnicas:</b><p>${escapeHTML(infoTecnica).replace(/\n/g,'<br>')}</p></div>`:'';
+  const blocoJogo=infoJogo?`<div class="portal-goleiro-info-bloco jogo"><b>Informações de Jogo:</b><p>${escapeHTML(infoJogo).replace(/\n/g,'<br>')}</p></div>`:'';
+  alvo.innerHTML=`<section class="portal-goleiro-inline-card"><div class="portal-goleiro-inline-title"><strong>Goleiros</strong>${atualizado?`<small>Atualizado em ${escapeHTML(atualizado)}</small>`:''}</div>${blocoTecnica}${blocoJogo}</section>`;
 }
 const PREPARACAO_FISICA_TABELA = 'portal_preparacao_fisica';
 let preparacaoFisicaRespostasAtuais = [];
