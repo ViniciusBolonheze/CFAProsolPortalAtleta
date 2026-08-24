@@ -473,3 +473,45 @@ button.portal-sair-btn{
   .portal-action-panel{bottom:calc(env(safe-area-inset-bottom,0px) + 86px)!important;}
   #ficha-screen.active,#ficha-container{padding-bottom:166px!important;}
 }
+
+/* ===== Portal Atleta: Sair no celular ao lado do Tela Cheia + voltar fecha PSR/PSE ===== */
+@media(max-width:760px){
+  #ficha-screen .portal-header .portal-sair-btn,
+  button.portal-sair-btn{
+    top:8px!important;
+    right:46px!important;
+    left:auto!important;
+    transform:none!important;
+    min-width:64px!important;
+    width:auto!important;
+    height:32px!important;
+    padding:0 14px!important;
+    font-size:12px!important;
+    z-index:10062!important;
+  }
+  #portal-fullscreen-btn.portal-fullscreen-btn{
+    top:8px!important;
+    right:8px!important;
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    padding:0!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    z-index:10063!important;
+  }
+  .portal-header .portal-title-block{
+    padding-right:118px!important;
+  }
+}
+@media(max-width:390px){
+  #ficha-screen .portal-header .portal-sair-btn,
+  button.portal-sair-btn{
+    right:44px!important;
+    min-width:58px!important;
+    padding:0 11px!important;
+    font-size:11px!important;
+  }
+  .portal-header .portal-title-block{padding-right:106px!important;}
+}

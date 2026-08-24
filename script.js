@@ -438,7 +438,32 @@ function criarModalPortalDiario(){
   }
   return modal;
 }
-function fecharModalDiario(){const modal=document.getElementById('portal-diario-modal');if(modal)modal.style.display='none';}
+function portalModalDiarioAberto(){
+  const modal=document.getElementById('portal-diario-modal');
+  return !!(modal && modal.style.display !== 'none' && getComputedStyle(modal).display !== 'none');
+}
+function registrarHistoricoModalDiarioPortal(){
+  if(!window.history || !history.pushState)return;
+  if(window.__portalDiarioHistoryPushed)return;
+  try{
+    history.pushState({portalModalDiario:true},'',location.href);
+    window.__portalDiarioHistoryPushed=true;
+  }catch(e){console.warn('Histórico do modal indisponível:',e);}
+}
+function fecharModalDiario(){
+  const modal=document.getElementById('portal-diario-modal');
+  if(modal)modal.style.display='none';
+}
+if(!window.__portalBackModalReady){
+  window.__portalBackModalReady=true;
+  window.addEventListener('popstate',()=>{
+    if(portalModalDiarioAberto()){
+      fecharModalDiario();
+      window.__portalDiarioHistoryPushed=false;
+    }
+  });
+}
+
 function opcoesNota(max){
   let html='<option value="">Selecione...</option>';
   for(let i=0;i<=max;i++)html+=`<option value="${i}">${i}</option>`;
@@ -494,6 +519,7 @@ async function abrirModalPSR(){
   const modal=criarModalPortalDiario();
   modal.innerHTML=`<div class="portal-diario-card portal-psr-card"><button class="portal-diario-close" onclick="fecharModalDiario()">×</button><h2>PSR</h2><p class="portal-diario-sub">Percepção Subjetiva de Recuperação - ${dataHojePortalBR()}</p><div class="portal-diario-info">0 = pior / 5 = melhor</div><div class="psr-scale-list">${psrEscalaHTML('psr_sono','Qualidade do sono',psr.sono)}${psrEscalaHTML('psr_fadiga','Fadiga',psr.fadiga)}${psrEscalaHTML('psr_dor','Dor muscular',psr.dor_muscular)}<label class="psr-dor-desc">Caso tenha dor, descreva<textarea id="psr-dor-desc" placeholder="Ex: panturrilha, posterior, joelho...">${escapeHTML(psr.dor_descricao||'')}</textarea></label>${psrEscalaHTML('psr_estresse','Estresse mental',psr.estresse_mental)}${psrEscalaHTML('psr_motivacao','Motivação para o treino',psr.motivacao)}</div><button class="portal-diario-save" onclick="salvarPSRPortal()">Salvar PSR</button><div id="portal-diario-msg" class="portal-diario-msg"></div></div>`;
   modal.style.display='flex';
+  registrarHistoricoModalDiarioPortal();
 }
 async function salvarPSRPortal(){
   const sono=psrValorSelecionado('psr_sono');
@@ -530,6 +556,7 @@ async function abrirModalPSE(){
     ['0','Repouso absoluto'],['1','Muito leve'],['2','Leve'],['3','Moderado'],['4','Um pouco pesado'],['5','Pesado'],['6','Muito pesado'],['7','Esforço máximo']
   ].map(([v,t])=>`<label><input type="radio" name="pse-valor" value="${v}"><span><strong>${v}</strong>${t}</span></label>`).join('')}</div><button class="portal-diario-save" onclick="salvarPSEPortal()">Salvar PSE</button><div id="portal-diario-msg" class="portal-diario-msg"></div></div>`;
   modal.style.display='flex';
+  registrarHistoricoModalDiarioPortal();
   if(pse.valor!==undefined&&pse.valor!==null){const r=modal.querySelector(`input[name="pse-valor"][value="${pse.valor}"]`);if(r)r.checked=true;}
 }
 async function salvarPSEPortal(){
