@@ -75,9 +75,21 @@ function classeDesempenho(row, aval, key){
 
 function togglePortalFullScreen(){
   if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen?.().catch(()=>{});
+    const el=document.documentElement;
+    const pedido=el.requestFullscreen({navigationUI:'hide'});
+    if(pedido&&pedido.catch) pedido.catch(()=>el.requestFullscreen?.().catch(()=>{}));
   }else{
     document.exitFullscreen?.();
+  }
+}
+function resetarOlhoSenhaPortal(){
+  const input=document.getElementById('login-senha');
+  const btn=document.getElementById('login-senha-olho');
+  if(input) input.type='password';
+  if(btn){
+    btn.classList.remove('visivel');
+    btn.setAttribute('aria-label','Mostrar senha');
+    btn.title='Mostrar senha';
   }
 }
 function atualizarRelogioInatividadePortal(){
@@ -560,9 +572,34 @@ async function salvarQueixaPreparacaoFisicaPortal(){
   finally{if(btn){btn.disabled=false;btn.textContent='Enviar para preparação física';}}
 }
 function mostrarFicha(row){document.getElementById('login-screen').classList.remove('active');document.getElementById('ficha-screen').classList.add('active');atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();setTimeout(()=>{carregarGoleiroInfoPortalAtleta();carregarRespostaPreparacaoFisicaPortal();},0);document.getElementById('portal-atleta-logado').textContent=apelido(row);const avals=avaliacoesAtleta(row);const resumo=avals.length?`<div class="section-title">Resumo da Última Avaliação</div><div class="resumo-grid">${card('Peso','peso',avals,' Kg',false,null,'sem-cor')}${card('Altura','altura',avals,' m',false,null,'sem-cor')}${card('Alt. Predita','predita',avals,' m',false,null,'sem-cor')}${card('% Gordura','gordura',avals,'',true,row)}${card('Resistência','distancia',avals,' m',false,row)}${card('Potência','salto',avals,' m',false,row)}${card('Aceleração','aceleracao',avals,' s',true,row)}${card('Velocidade','velocidade',avals,' s',true,row)}${card('Agilidade','agilidade',avals,' s',true,row)}</div><div class="section-title">Comparativo das Avaliações</div><div class="comp-wrap"><table class="comparativo"><thead><tr><th>Data</th><th>Peso</th><th>Altura</th><th>Gordura</th><th>Dist.</th><th>Salto</th><th>Acel.</th><th>Veloc.</th><th>Agil.</th></tr></thead><tbody>${avals.map(a=>`<tr><td>${escapeHTML(a.data)}</td><td>${escapeHTML(a.peso)}</td><td>${escapeHTML(a.altura)}</td><td>${escapeHTML(a.gordura)}</td><td>${escapeHTML(a.distancia)}</td><td>${escapeHTML(a.salto)}</td><td>${escapeHTML(a.aceleracao)}</td><td>${escapeHTML(a.velocidade)}</td><td>${escapeHTML(a.agilidade)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aviso">Nenhuma avaliação física encontrada.</div>';document.getElementById('ficha-container').innerHTML=`<div class="ficha-wrap"><div class="foto-area"><img src="${foto(row)}" onerror="this.src='logo.png'" alt="${escapeHTML(nomeCompleto(row))}"></div><div class="dados-area"><h1 class="apelido">${escapeHTML(apelido(row))}</h1><div class="nome-completo">${escapeHTML(nomeCompleto(row))}</div><div class="info-grid"><p><strong>Ano:</strong> ${escapeHTML(anoAtleta(row))}</p><p><strong>Nascimento:</strong> ${escapeHTML(nascimento(row))}</p><p><strong>Posição:</strong> ${escapeHTML(posicao(row))}</p><p><strong>Cidade:</strong> ${escapeHTML(cidade(row))}</p></div><div id="portal-goleiro-info-inline" class="portal-goleiro-inline"></div><div id="preparacao-fisica-resposta-inline"></div>${resumo}<div class="preparacao-fisica-area"><button type="button" class="preparacao-fisica-btn" onclick="abrirPreparacaoFisicaPortal()">Preparação Física</button></div></div></div>`;}
-function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';goleiroInfoPortalAtleta=null;preparacaoFisicaRespostasAtuais=[];fecharPreparacaoFisicaPortal();document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=false;}
+function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';goleiroInfoPortalAtleta=null;preparacaoFisicaRespostasAtuais=[];fecharPreparacaoFisicaPortal();document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';resetarOlhoSenhaPortal();const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=false;}
 async function tentarRestaurarSessao(){const s=sessionStorage.getItem('portal_atleta_logado');if(!s)return;try{const obj=JSON.parse(s);const row=atletasBanco.find(r=>nomeCompleto(r)===obj.nomeCompleto&&nascimento(r)===obj.nascimento);if(row)mostrarFicha(row);}catch(e){}}
-window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');iniciarInatividadePortal();await carregarAtletas();await tentarLoginLocalSalvo();});
+function toggleVisibilidadeSenhaPortal(){
+  const input=document.getElementById('login-senha');
+  const btn=document.getElementById('login-senha-olho');
+  if(!input)return;
+  const mostrar=input.type==='password';
+  input.type=mostrar?'text':'password';
+  if(btn){
+    btn.classList.toggle('visivel',mostrar);
+    btn.setAttribute('aria-label',mostrar?'Ocultar senha':'Mostrar senha');
+    btn.title=mostrar?'Ocultar senha':'Mostrar senha';
+  }
+}
+function iniciarEnterLoginPortal(){
+  const campos=['login-ano','login-atleta','login-senha'];
+  campos.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){
+        e.preventDefault();
+        entrarPortalAtleta();
+      }
+    });
+  });
+}
+window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');resetarOlhoSenhaPortal();iniciarEnterLoginPortal();iniciarInatividadePortal();await carregarAtletas();await tentarLoginLocalSalvo();});
 
 
 /* === PSR / PSE - Relatório diário do atleta === */
@@ -591,7 +628,7 @@ function criarModalPortalDiario(){
     modal.id='portal-diario-modal';
     modal.className='portal-diario-overlay';
     document.body.appendChild(modal);
-    modal.addEventListener('click',e=>{if(e.target===modal)fecharModalDiario();});
+    // PSR/PSE: fecha só no X ou ao salvar — clique fora não fecha.
   }
   return modal;
 }
@@ -654,15 +691,57 @@ async function salvarRespostaDiariaPortal(tipo,valor){
   if(error){console.error(error);alert('Erro ao salvar. Tente novamente.');return false;}
   return true;
 }
+function psrEscalaMelhorNoAlto(nome){
+  return ['psr_sono','psr_motivacao'].includes(nome);
+}
 function psrRotulosEscala(nome){
   const positivos = ['Muito ruim','Ruim','Regular','Médio','Bom','Muito bom'];
   const carga = ['Nenhuma','Muito pouco','Pouco','Médio','Alto','Muito alto'];
-  if(['psr_sono','psr_motivacao'].includes(nome)) return positivos;
+  if(psrEscalaMelhorNoAlto(nome)) return positivos;
   return carga;
+}
+function psrCarinhaSVG(nota, melhorNoAlto){
+  const cores = ['#dc2626','#f97316','#f59e0b','#eab308','#65a30d','#16a34a'];
+  const nivel = melhorNoAlto ? nota : (5 - nota);
+  const cor = cores[nivel];
+  const olhos = nivel <= 1 ? 'x' : 'o';
+  const boca = nivel <= 1 ? 'sad' : (nivel === 2 ? 'meh' : (nivel === 3 ? 'ok' : 'smile'));
+  let bocaPath = 'M10 21 Q16 26 22 21';
+  if(boca === 'ok') bocaPath = 'M10 21 Q16 24 22 21';
+  if(boca === 'meh') bocaPath = 'M10 22 H22';
+  if(boca === 'sad') bocaPath = 'M10 24 Q16 19 22 24';
+  const olhoEsq = olhos === 'x'
+    ? '<path d="M9 11 L13 15 M13 11 L9 15" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>'
+    : '<circle cx="11" cy="13" r="1.7" fill="#fff"/>';
+  const olhoDir = olhos === 'x'
+    ? '<path d="M19 11 L23 15 M23 11 L19 15" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>'
+    : '<circle cx="21" cy="13" r="1.7" fill="#fff"/>';
+  return `<svg class="psr-face" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="${cor}"></circle>${olhoEsq}${olhoDir}<path d="${bocaPath}" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+function togglePsrAjuda(ev){
+  ev.preventDefault();
+  ev.stopPropagation();
+  const wrap = ev.currentTarget.closest('.psr-ajuda');
+  if(!wrap) return;
+  const aberto = wrap.classList.contains('aberta');
+  document.querySelectorAll('.psr-ajuda.aberta').forEach(el => el.classList.remove('aberta'));
+  if(!aberto) wrap.classList.add('aberta');
+}
+if(!window.__psrAjudaFora){
+  window.__psrAjudaFora = true;
+  document.addEventListener('click', function(e){
+    if(e.target.closest && e.target.closest('.psr-ajuda')) return;
+    document.querySelectorAll('.psr-ajuda.aberta').forEach(el => el.classList.remove('aberta'));
+  });
 }
 function psrEscalaHTML(nome,label,valorAtual){
   const rotulos = psrRotulosEscala(nome);
-  return `<div class="psr-scale-row"><div class="psr-scale-title">${label}</div><div class="psr-scale-options">${[0,1,2,3,4,5].map(v=>`<label><input type="radio" name="${nome}" value="${v}" ${String(valorAtual)===String(v)?'checked':''}><span><strong>${v}</strong><small>${rotulos[v]}</small></span></label>`).join('')}</div></div>`;
+  const melhorNoAlto = psrEscalaMelhorNoAlto(nome);
+  const polaridade = melhorNoAlto ? 'melhor' : 'pior';
+  const ajuda = nome === 'psr_fadiga'
+    ? `<span class="psr-ajuda"><button type="button" class="psr-ajuda-btn" onclick="togglePsrAjuda(event)" aria-label="O que é fadiga?">?</button><span class="psr-ajuda-texto"><b>Sensação de desgaste:</b> Representa o nível de cansaço físico e mental acumulado que o corpo ainda carrega de esforços anteriores.</span></span>`
+    : '';
+  return `<div class="psr-scale-row"><div class="psr-scale-title">${label}${ajuda}</div><div class="psr-scale-options psr-pol-${polaridade}">${[0,1,2,3,4,5].map(v=>`<label><input type="radio" name="${nome}" value="${v}" ${String(valorAtual)===String(v)?'checked':''}><span class="psr-opt psr-n${v}">${psrCarinhaSVG(v,melhorNoAlto)}<strong>${v}</strong><small>${rotulos[v]}</small></span></label>`).join('')}</div></div>`;
 }
 function psrValorSelecionado(nome){
   const el=document.querySelector(`input[name="${nome}"]:checked`);
@@ -674,7 +753,7 @@ async function abrirModalPSR(){
   const existente=await buscarRespostaDiariaPortal();
   const psr=(existente&&existente.psr)||{};
   const modal=criarModalPortalDiario();
-  modal.innerHTML=`<div class="portal-diario-card portal-psr-card"><button class="portal-diario-close" onclick="fecharModalDiario()">×</button><h2>PSR</h2><p class="portal-diario-sub">Percepção Subjetiva de Recuperação - ${dataHojePortalBR()}</p><div class="portal-diario-info">0 = pior / 5 = melhor</div><div class="psr-scale-list">${psrEscalaHTML('psr_sono','Qualidade do sono',psr.sono)}${psrEscalaHTML('psr_fadiga','Fadiga',psr.fadiga)}${psrEscalaHTML('psr_dor','Dor muscular',psr.dor_muscular)}<label class="psr-dor-desc">Caso tenha dor, descreva<textarea id="psr-dor-desc" placeholder="Ex: panturrilha, posterior, joelho...">${escapeHTML(psr.dor_descricao||'')}</textarea></label>${psrEscalaHTML('psr_estresse','Estresse mental',psr.estresse_mental)}${psrEscalaHTML('psr_motivacao','Motivação para o treino',psr.motivacao)}</div><button class="portal-diario-save" onclick="salvarPSRPortal()">Salvar PSR</button><div id="portal-diario-msg" class="portal-diario-msg"></div></div>`;
+  modal.innerHTML=`<div class="portal-diario-card portal-psr-card"><button class="portal-diario-close" onclick="fecharModalDiario()">×</button><h2>PSR</h2><p class="portal-diario-sub">Percepção Subjetiva de Recuperação - ${dataHojePortalBR()}</p><div class="psr-scale-list">${psrEscalaHTML('psr_sono','Qualidade do sono',psr.sono)}${psrEscalaHTML('psr_fadiga','Fadiga',psr.fadiga)}${psrEscalaHTML('psr_dor','Dor muscular',psr.dor_muscular)}<label class="psr-dor-desc">Caso tenha dor, descreva<textarea id="psr-dor-desc" placeholder="Ex: panturrilha, posterior, joelho...">${escapeHTML(psr.dor_descricao||'')}</textarea></label>${psrEscalaHTML('psr_estresse','Estresse mental',psr.estresse_mental)}${psrEscalaHTML('psr_motivacao','Motivação para o treino',psr.motivacao)}</div><button class="portal-diario-save" onclick="salvarPSRPortal()">Salvar PSR</button><div id="portal-diario-msg" class="portal-diario-msg"></div></div>`;
   modal.style.display='flex';
   registrarHistoricoModalDiarioPortal();
 }

@@ -517,6 +517,50 @@ button.portal-sair-btn{
 }
 
 /* ===== Portal Atleta: manter conectado neste aparelho ===== */
+.login-senha-wrap{
+  position:relative;
+  margin-top:5px;
+}
+.login-fields .login-senha-wrap input{
+  display:block;
+  width:100%;
+  margin-top:0;
+  padding-right:44px;
+}
+.login-senha-olho{
+  position:absolute;
+  top:50%;
+  right:6px;
+  transform:translateY(-50%);
+  width:34px;
+  height:34px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  color:#58111a;
+  font-size:16px;
+  line-height:1;
+  cursor:pointer;
+  padding:0;
+}
+.login-senha-olho.visivel{
+  background:#f9c614;
+}
+@media(min-width:761px){
+  #portal-fullscreen-btn.portal-fullscreen-btn{
+    top:8px!important;
+    right:10px!important;
+    left:auto!important;
+  }
+  #ficha-screen .portal-header .portal-sair-btn,
+  button.portal-sair-btn{
+    top:48px!important;
+    right:10px!important;
+    left:auto!important;
+    transform:none!important;
+    min-width:110px!important;
+  }
+}
 .login-remember{
   display:flex;
   align-items:center;
@@ -896,4 +940,74 @@ button.portal-sair-btn{
     border-radius:18px!important;
     font-size:13px!important;
   }
+}
+
+/* ===== Portal Atleta: PSR carinhas coloridas, cards iguais ao original ===== */
+.psr-scale-options span.psr-opt{
+  min-height:72px!important;
+  padding-top:6px!important;
+}
+.psr-scale-options span.psr-opt .psr-face{
+  width:26px;
+  height:26px;
+  display:block;
+  margin:0 auto 2px;
+}
+.psr-scale-options span.psr-opt strong{
+  color:inherit;
+}
+.psr-scale-options span.psr-opt small{
+  color:#555;
+}
+.psr-scale-options input:checked+span.psr-opt .psr-face{
+  filter:drop-shadow(0 0 0 1px #fff);
+}
+.psr-scale-title{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+.psr-ajuda{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+.psr-ajuda-btn{
+  width:18px;
+  height:18px;
+  border:1px solid #58111a;
+  border-radius:50%;
+  background:#fff;
+  color:#58111a;
+  font-size:12px;
+  font-weight:900;
+  line-height:1;
+  padding:0;
+  cursor:help;
+}
+.psr-ajuda-texto{
+  display:none;
+  position:absolute;
+  left:0;
+  top:calc(100% + 6px);
+  z-index:30;
+  width:min(260px,70vw);
+  background:#58111a;
+  color:#fff;
+  border:1px solid #f9c614;
+  border-radius:10px;
+  padding:9px 11px;
+  font-size:11px;
+  font-weight:700;
+  line-height:1.35;
+  box-shadow:0 8px 18px rgba(0,0,0,.28);
+}
+.psr-ajuda-texto b{color:#f9c614;display:block;margin-bottom:3px;}
+.psr-ajuda:hover .psr-ajuda-texto,
+.psr-ajuda.aberta .psr-ajuda-texto{
+  display:block;
+}
+@media(max-width:760px){
+  .psr-scale-options span.psr-opt{min-height:68px!important;}
+  .psr-scale-options span.psr-opt .psr-face{width:22px;height:22px;}
 }
