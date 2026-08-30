@@ -1,7 +1,7 @@
 const SUPABASE_URL = 'https://jrudgjopfxfyyhnvgidz.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_VScGEvhYLgQSDGll2IQIsw_bsTQXRCO';
-const SENHA_RECUPERACAO_PADRAO = 'blucxj';
-const SENHA_COORDENACAO_PADRAO = 'cfaprosol2023';
+const SENHA_RECUPERACAO_PADRAO = 'CFAPROSOL';
+const SENHAS_COORDENACAO_PADRAO = ['cfaprosol2023','blucxj123'];
 const TEMPO_INATIVIDADE_PORTAL = 5 * 60 * 1000;
 const PORTAL_LOGIN_PERSIST_KEY = 'portal_atleta_login_salvo_v1';
 
@@ -10,6 +10,7 @@ let atletasBanco = [];
 let atletaLogado = null;
 let documentosPortalAtleta = { trabalho: null, planejamento: null };
 let goleiroInfoPortalAtleta = null;
+let goleiroJogosPortalAtleta = [];
 let inicioInatividadePortal = Date.now();
 let timerInatividadePortal = null;
 
@@ -92,6 +93,27 @@ function resetarOlhoSenhaPortal(){
     btn.title='Mostrar senha';
   }
 }
+function toggleVisibilidadeSenhaPortal(){
+  const input=document.getElementById('login-senha');
+  const btn=document.getElementById('login-senha-olho');
+  if(!input)return;
+  const mostrar=input.type==='password';
+  input.type=mostrar?'text':'password';
+  if(btn){
+    btn.classList.toggle('visivel',mostrar);
+    btn.setAttribute('aria-label',mostrar?'Ocultar senha':'Mostrar senha');
+    btn.title=mostrar?'Ocultar senha':'Mostrar senha';
+  }
+}
+function iniciarEnterLoginPortal(){
+  ['login-ano','login-atleta','login-senha'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){ e.preventDefault(); entrarPortalAtleta(); }
+    });
+  });
+}
 function atualizarRelogioInatividadePortal(){
   const el=document.getElementById('portal-inactivity-clock');
   const restante=Math.max(0,TEMPO_INATIVIDADE_PORTAL-(Date.now()-inicioInatividadePortal));
@@ -164,7 +186,7 @@ async function entrarPortalAtleta(){
   let senhaParaSalvar=senha;
 
   // Senha da coordenação: entra em qualquer atleta sem criar/alterar cadastro e não fica salva no aparelho.
-  if(senha === SENHA_COORDENACAO_PADRAO){
+  if(SENHAS_COORDENACAO_PADRAO.includes(senha)){
     portalLimparLoginLocal();
     atletaLogado={nomeCompleto:nome,nascimento:nasc,row,coordenacao:true};
     mostrarFicha(row);
@@ -182,7 +204,7 @@ async function entrarPortalAtleta(){
     if(res.error){msgLogin('Erro ao criar senha.');return}
     data=payload;
   }else if(data.senha!==senha){
-    if(senha===SENHA_RECUPERACAO_PADRAO||senha===data.senha_recuperacao){
+    if(senha===SENHA_RECUPERACAO_PADRAO){
       const nova=prompt('Senha de recuperação aceita. Digite uma nova senha:');
       if(!nova||nova.length<4){msgLogin('Nova senha inválida.');return}
       await sb.from('portal_atletas_acesso').update({senha:nova,primeiro_acesso:false,atualizado_em:new Date().toISOString()}).eq('nome_completo',nome).eq('nascimento',nasc);
@@ -461,22 +483,40 @@ function abrirPlanejamentoSemanalPortal(){
   });
 }
 
+function dataJogoGoleiroBR(v){
+  const s=String(v||'').slice(0,10);
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m?`${m[3]}/${m[2]}/${m[1]}`:s;
+}
+function rotuloJogoGoleiroPortal(jogo){
+  const data=dataJogoGoleiroBR(jogo?.data_jogo);
+  const adv=String(jogo?.adversario||'').trim()||'Adversário';
+  return `${data} – ${adv}`;
+}
 async function carregarGoleiroInfoPortalAtleta(){
   goleiroInfoPortalAtleta=null;
+  goleiroJogosPortalAtleta=[];
   const alvo=document.getElementById('portal-goleiro-info-inline');
   if(alvo)alvo.innerHTML='';
   if(!atletaLogado||!atletaLogado.nomeCompleto||!atletaLogado.nascimento)return;
   try{
-    const {data,error}=await sb.from('goleiros_informacoes_tecnicas')
-      .select('*')
-      .eq('nome_completo',atletaLogado.nomeCompleto)
-      .eq('nascimento',atletaLogado.nascimento)
-      .maybeSingle();
-    if(error){console.warn('Informações de goleiro não carregadas:',error.message);return;}
-    const infoTecnica=String(data?.informacoes_tecnicas||'').trim();
-    const infoJogo=String(data?.informacoes_jogo||'').trim();
-    if(!data||(!infoTecnica&&!infoJogo)){if(alvo)alvo.innerHTML='';return;}
-    goleiroInfoPortalAtleta=data;
+    const [tec,jogos]=await Promise.all([
+      sb.from('goleiros_informacoes_tecnicas')
+        .select('*')
+        .eq('nome_completo',atletaLogado.nomeCompleto)
+        .eq('nascimento',atletaLogado.nascimento)
+        .maybeSingle(),
+      sb.from('goleiros_informacoes_jogos')
+        .select('*')
+        .eq('nome_completo',atletaLogado.nomeCompleto)
+        .eq('nascimento',atletaLogado.nascimento)
+        .order('data_jogo',{ascending:false})
+        .order('atualizado_em',{ascending:false})
+    ]);
+    if(tec.error) console.warn('Informações técnicas de goleiro não carregadas:',tec.error.message);
+    if(jogos.error) console.warn('Jogos do goleiro não carregados:',jogos.error.message);
+    goleiroInfoPortalAtleta=tec.data||null;
+    goleiroJogosPortalAtleta=Array.isArray(jogos.data)?jogos.data:[];
     renderGoleiroInfoInlinePortal();
   }catch(e){console.warn('Erro ao carregar informações de goleiro:',e);}
 }
@@ -484,12 +524,25 @@ function renderGoleiroInfoInlinePortal(){
   const alvo=document.getElementById('portal-goleiro-info-inline');
   if(!alvo)return;
   const infoTecnica=String(goleiroInfoPortalAtleta?.informacoes_tecnicas||'').trim();
-  const infoJogo=String(goleiroInfoPortalAtleta?.informacoes_jogo||'').trim();
-  if(!infoTecnica&&!infoJogo){alvo.innerHTML='';return;}
-  const atualizado=goleiroInfoPortalAtleta.atualizado_em?new Date(goleiroInfoPortalAtleta.atualizado_em).toLocaleDateString('pt-BR'):'';
+  const jogos=goleiroJogosPortalAtleta||[];
+  if(!infoTecnica&&!jogos.length){alvo.innerHTML='';return;}
+  const atualizado=goleiroInfoPortalAtleta?.atualizado_em?new Date(goleiroInfoPortalAtleta.atualizado_em).toLocaleDateString('pt-BR'):'';
   const blocoTecnica=infoTecnica?`<div class="portal-goleiro-info-bloco"><b>Informações Técnicas:</b><p>${escapeHTML(infoTecnica).replace(/\n/g,'<br>')}</p></div>`:'';
-  const blocoJogo=infoJogo?`<div class="portal-goleiro-info-bloco jogo"><b>Informações de Jogo:</b><p>${escapeHTML(infoJogo).replace(/\n/g,'<br>')}</p></div>`:'';
+  let blocoJogo='';
+  if(jogos.length){
+    const primeiro=jogos[0];
+    const opcoes=jogos.map((j,i)=>`<option value="${escapeHTML(String(j.id||i))}" ${i===0?'selected':''}>${escapeHTML(rotuloJogoGoleiroPortal(j))}</option>`).join('');
+    blocoJogo=`<div class="portal-goleiro-info-bloco jogo"><b>Informações de jogo:</b><label class="portal-goleiro-jogo-select-wrap">Selecionar o jogo<select id="portal-goleiro-jogo-select" onchange="atualizarTextoJogoGoleiroPortal()">${opcoes}</select></label><p id="portal-goleiro-jogo-texto">${escapeHTML(String(primeiro.informacoes||'')).replace(/\n/g,'<br>')||'Sem texto neste jogo.'}</p></div>`;
+  }
   alvo.innerHTML=`<section class="portal-goleiro-inline-card"><div class="portal-goleiro-inline-title"><strong>Goleiros</strong>${atualizado?`<small>Atualizado em ${escapeHTML(atualizado)}</small>`:''}</div>${blocoTecnica}${blocoJogo}</section>`;
+}
+function atualizarTextoJogoGoleiroPortal(){
+  const sel=document.getElementById('portal-goleiro-jogo-select');
+  const texto=document.getElementById('portal-goleiro-jogo-texto');
+  if(!sel||!texto)return;
+  const jogo=(goleiroJogosPortalAtleta||[]).find(j=>String(j.id)===String(sel.value))||goleiroJogosPortalAtleta[0];
+  const body=String(jogo?.informacoes||'').trim();
+  texto.innerHTML=body?escapeHTML(body).replace(/\n/g,'<br>'):'Sem texto neste jogo.';
 }
 const PREPARACAO_FISICA_TABELA = 'portal_preparacao_fisica';
 let preparacaoFisicaRespostasAtuais = [];
@@ -574,31 +627,6 @@ async function salvarQueixaPreparacaoFisicaPortal(){
 function mostrarFicha(row){document.getElementById('login-screen').classList.remove('active');document.getElementById('ficha-screen').classList.add('active');atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();setTimeout(()=>{carregarGoleiroInfoPortalAtleta();carregarRespostaPreparacaoFisicaPortal();},0);document.getElementById('portal-atleta-logado').textContent=apelido(row);const avals=avaliacoesAtleta(row);const resumo=avals.length?`<div class="section-title">Resumo da Última Avaliação</div><div class="resumo-grid">${card('Peso','peso',avals,' Kg',false,null,'sem-cor')}${card('Altura','altura',avals,' m',false,null,'sem-cor')}${card('Alt. Predita','predita',avals,' m',false,null,'sem-cor')}${card('% Gordura','gordura',avals,'',true,row)}${card('Resistência','distancia',avals,' m',false,row)}${card('Potência','salto',avals,' m',false,row)}${card('Aceleração','aceleracao',avals,' s',true,row)}${card('Velocidade','velocidade',avals,' s',true,row)}${card('Agilidade','agilidade',avals,' s',true,row)}</div><div class="section-title">Comparativo das Avaliações</div><div class="comp-wrap"><table class="comparativo"><thead><tr><th>Data</th><th>Peso</th><th>Altura</th><th>Gordura</th><th>Dist.</th><th>Salto</th><th>Acel.</th><th>Veloc.</th><th>Agil.</th></tr></thead><tbody>${avals.map(a=>`<tr><td>${escapeHTML(a.data)}</td><td>${escapeHTML(a.peso)}</td><td>${escapeHTML(a.altura)}</td><td>${escapeHTML(a.gordura)}</td><td>${escapeHTML(a.distancia)}</td><td>${escapeHTML(a.salto)}</td><td>${escapeHTML(a.aceleracao)}</td><td>${escapeHTML(a.velocidade)}</td><td>${escapeHTML(a.agilidade)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aviso">Nenhuma avaliação física encontrada.</div>';document.getElementById('ficha-container').innerHTML=`<div class="ficha-wrap"><div class="foto-area"><img src="${foto(row)}" onerror="this.src='logo.png'" alt="${escapeHTML(nomeCompleto(row))}"></div><div class="dados-area"><h1 class="apelido">${escapeHTML(apelido(row))}</h1><div class="nome-completo">${escapeHTML(nomeCompleto(row))}</div><div class="info-grid"><p><strong>Ano:</strong> ${escapeHTML(anoAtleta(row))}</p><p><strong>Nascimento:</strong> ${escapeHTML(nascimento(row))}</p><p><strong>Posição:</strong> ${escapeHTML(posicao(row))}</p><p><strong>Cidade:</strong> ${escapeHTML(cidade(row))}</p></div><div id="portal-goleiro-info-inline" class="portal-goleiro-inline"></div><div id="preparacao-fisica-resposta-inline"></div>${resumo}<div class="preparacao-fisica-area"><button type="button" class="preparacao-fisica-btn" onclick="abrirPreparacaoFisicaPortal()">Preparação Física</button></div></div></div>`;}
 function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';goleiroInfoPortalAtleta=null;preparacaoFisicaRespostasAtuais=[];fecharPreparacaoFisicaPortal();document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';resetarOlhoSenhaPortal();const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=false;}
 async function tentarRestaurarSessao(){const s=sessionStorage.getItem('portal_atleta_logado');if(!s)return;try{const obj=JSON.parse(s);const row=atletasBanco.find(r=>nomeCompleto(r)===obj.nomeCompleto&&nascimento(r)===obj.nascimento);if(row)mostrarFicha(row);}catch(e){}}
-function toggleVisibilidadeSenhaPortal(){
-  const input=document.getElementById('login-senha');
-  const btn=document.getElementById('login-senha-olho');
-  if(!input)return;
-  const mostrar=input.type==='password';
-  input.type=mostrar?'text':'password';
-  if(btn){
-    btn.classList.toggle('visivel',mostrar);
-    btn.setAttribute('aria-label',mostrar?'Ocultar senha':'Mostrar senha');
-    btn.title=mostrar?'Ocultar senha':'Mostrar senha';
-  }
-}
-function iniciarEnterLoginPortal(){
-  const campos=['login-ano','login-atleta','login-senha'];
-  campos.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el)return;
-    el.addEventListener('keydown',e=>{
-      if(e.key==='Enter'){
-        e.preventDefault();
-        entrarPortalAtleta();
-      }
-    });
-  });
-}
 window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');resetarOlhoSenhaPortal();iniciarEnterLoginPortal();iniciarInatividadePortal();await carregarAtletas();await tentarLoginLocalSalvo();});
 
 
@@ -628,7 +656,7 @@ function criarModalPortalDiario(){
     modal.id='portal-diario-modal';
     modal.className='portal-diario-overlay';
     document.body.appendChild(modal);
-    // PSR/PSE: fecha só no X ou ao salvar — clique fora não fecha.
+    // PSR/PSE: fecha so no X ou ao salvar
   }
   return modal;
 }
