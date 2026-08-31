@@ -2,7 +2,6 @@ const SUPABASE_URL = 'https://jrudgjopfxfyyhnvgidz.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_VScGEvhYLgQSDGll2IQIsw_bsTQXRCO';
 const SENHA_RECUPERACAO_PADRAO = 'CFAPROSOL';
 const SENHAS_COORDENACAO_PADRAO = ['cfaprosol2023','blucxj123'];
-const TEMPO_INATIVIDADE_PORTAL = 5 * 60 * 1000;
 const PORTAL_LOGIN_PERSIST_KEY = 'portal_atleta_login_salvo_v1';
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -11,8 +10,6 @@ let atletaLogado = null;
 let documentosPortalAtleta = { trabalho: null, planejamento: null };
 let goleiroInfoPortalAtleta = null;
 let goleiroJogosPortalAtleta = [];
-let inicioInatividadePortal = Date.now();
-let timerInatividadePortal = null;
 
 function msgLogin(texto){document.getElementById('login-msg').textContent=texto||'';}
 function norm(v){return String(v??'').trim().replace(/\s+/g,' ')}
@@ -114,25 +111,6 @@ function iniciarEnterLoginPortal(){
     });
   });
 }
-function atualizarRelogioInatividadePortal(){
-  const el=document.getElementById('portal-inactivity-clock');
-  const restante=Math.max(0,TEMPO_INATIVIDADE_PORTAL-(Date.now()-inicioInatividadePortal));
-  const m=String(Math.floor(restante/60000)).padStart(2,'0');
-  const s=String(Math.floor((restante%60000)/1000)).padStart(2,'0');
-  if(el)el.textContent='↻ '+m+':'+s;
-}
-function resetarInatividadePortal(){
-  inicioInatividadePortal=Date.now();
-  clearTimeout(timerInatividadePortal);
-  timerInatividadePortal=setTimeout(()=>window.location.reload(),TEMPO_INATIVIDADE_PORTAL);
-  atualizarRelogioInatividadePortal();
-}
-function iniciarInatividadePortal(){
-  ['mousedown','keydown','input','change','scroll','touchstart','pointerdown'].forEach(evt=>document.addEventListener(evt,resetarInatividadePortal,{passive:true}));
-  resetarInatividadePortal();
-  setInterval(atualizarRelogioInatividadePortal,1000);
-}
-
 function portalManterConectadoMarcado(){return !!document.getElementById('login-manter-conectado')?.checked;}
 function portalSalvarLoginLocal(row, senha){
   if(!row||!senha)return;
@@ -677,7 +655,7 @@ function atualizarStatusAppPortal(){
   const tok=(window.CFA_PORTAL_APP&&window.CFA_PORTAL_APP.fcmToken)?'token ok':'sem token';
   el.textContent=(nat?'APK nativo':'NÃO é o APK')+' · '+tok+(st?' · '+st:'')+(cap?'':' · sem Capacitor');
 }
-window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');resetarOlhoSenhaPortal();iniciarEnterLoginPortal();iniciarInatividadePortal();const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=true;atualizarStatusAppPortal();setInterval(atualizarStatusAppPortal,1500);await carregarAtletas();await tentarLoginLocalSalvo();setInterval(()=>{if(atletaLogado){atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();}},180000);});
+window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');resetarOlhoSenhaPortal();iniciarEnterLoginPortal();const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=true;atualizarStatusAppPortal();setInterval(atualizarStatusAppPortal,1500);await carregarAtletas();await tentarLoginLocalSalvo();setInterval(()=>{if(atletaLogado){atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();}},180000);});
 
 
 /* === PSR / PSE - Relatório diário do atleta === */
