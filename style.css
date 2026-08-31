@@ -1011,3 +1011,18 @@ button.portal-sair-btn{
   .psr-scale-options span.psr-opt{min-height:68px!important;}
   .psr-scale-options span.psr-opt .psr-face{width:22px;height:22px;}
 }
+
+/* Sinal no logo (pendências PSR/PSE/docs) */
+.portal-logo-wrap{position:relative;display:inline-flex;flex:0 0 auto;}
+.portal-header .portal-logo-wrap img{width:44px;height:44px;object-fit:contain;display:block;}
+.portal-logo-badge{
+  position:absolute;top:-4px;right:-6px;min-width:18px;height:18px;padding:0 5px;
+  border-radius:999px;background:#e11d48;color:#fff;border:2px solid #f9c614;
+  font-size:10px;font-weight:950;display:inline-flex;align-items:center;justify-content:center;
+  line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.35);z-index:2;
+}
+.portal-logo-badge[hidden]{display:none!important;}
+.login-remember{display:flex;align-items:center;gap:8px;color:#fff;font-size:12px;font-weight:700;margin:0 0 14px;text-align:left;}
+.login-remember input{width:16px;height:16px;}
+
+.portal-app-status{margin-top:10px;color:#f9c614;font-size:11px;font-weight:800;line-height:1.3;min-height:16px;}

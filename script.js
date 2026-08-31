@@ -212,8 +212,8 @@ async function entrarPortalAtleta(){
     }else{msgLogin('Senha incorreta.');return}
   }
 
-  if(portalManterConectadoMarcado()) portalSalvarLoginLocal(row, senhaParaSalvar);
-  else portalLimparLoginLocal();
+  const chk=document.getElementById('login-manter-conectado'); if(chk) chk.checked=true;
+  portalSalvarLoginLocal(row, senhaParaSalvar);
   atletaLogado={nomeCompleto:nome,nascimento:nasc,row,coordenacao:false};
   mostrarFicha(row);
 }
@@ -272,6 +272,9 @@ async function atualizarBotoesQuestionariosPortal(){
   try{respostaHoje=await buscarRespostaDiariaPortal(dataHojePortalISO());}catch(e){console.warn('Não foi possível verificar PSR/PSE enviados:',e);}
   aplicarEstadoQuestionarioPortal(psrBtn,respostaQuestionarioPreenchidaPortal('psr',respostaHoje),'Preencher PSR','PSR já enviado hoje');
   aplicarEstadoQuestionarioPortal(pseBtn,respostaQuestionarioPreenchidaPortal('pse',respostaHoje),'Preencher PSE','PSE já enviado hoje');
+  window._portalPsrEnviado=respostaQuestionarioPreenchidaPortal('psr',respostaHoje);
+  window._portalPseEnviado=respostaQuestionarioPreenchidaPortal('pse',respostaHoje);
+  atualizarSinalLogoENotificacoesPortal();
 }
 function normalizarPortalDocumento(v){return String(v||'').trim().replace(/\s+/g,' ');}
 function registroTemArquivoPortal(reg){return !!(reg && (reg.public_url || reg.storage_path));}
@@ -353,6 +356,7 @@ async function carregarDocumentosPortalAtleta(){
     aplicarEstadoBotaoDocumentoPortal('trabalho');
     aplicarEstadoBotaoDocumentoPortal('planejamento');
     box.style.display=(documentosPortalAtleta.trabalho||documentosPortalAtleta.planejamento)?'flex':'none';
+    atualizarSinalLogoENotificacoesPortal();
   }catch(e){
     console.warn('Erro ao carregar trabalhos/planejamentos do atleta:',e);
     box.style.display='none';
@@ -470,6 +474,7 @@ function abrirTrabalhoDiarioPortal(){
   registrarAcessoDocumentoPortal('trabalho_diario', reg, 'trabalhos-diarios').then(()=>{
     documentosPortalAtleta.trabalhoVisto=true;
     aplicarEstadoBotaoDocumentoPortal('trabalho');
+    atualizarSinalLogoENotificacoesPortal();
   });
 }
 function abrirPlanejamentoSemanalPortal(){
@@ -625,9 +630,54 @@ async function salvarQueixaPreparacaoFisicaPortal(){
   finally{if(btn){btn.disabled=false;btn.textContent='Enviar para preparação física';}}
 }
 function mostrarFicha(row){document.getElementById('login-screen').classList.remove('active');document.getElementById('ficha-screen').classList.add('active');atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();setTimeout(()=>{carregarGoleiroInfoPortalAtleta();carregarRespostaPreparacaoFisicaPortal();},0);document.getElementById('portal-atleta-logado').textContent=apelido(row);const avals=avaliacoesAtleta(row);const resumo=avals.length?`<div class="section-title">Resumo da Última Avaliação</div><div class="resumo-grid">${card('Peso','peso',avals,' Kg',false,null,'sem-cor')}${card('Altura','altura',avals,' m',false,null,'sem-cor')}${card('Alt. Predita','predita',avals,' m',false,null,'sem-cor')}${card('% Gordura','gordura',avals,'',true,row)}${card('Resistência','distancia',avals,' m',false,row)}${card('Potência','salto',avals,' m',false,row)}${card('Aceleração','aceleracao',avals,' s',true,row)}${card('Velocidade','velocidade',avals,' s',true,row)}${card('Agilidade','agilidade',avals,' s',true,row)}</div><div class="section-title">Comparativo das Avaliações</div><div class="comp-wrap"><table class="comparativo"><thead><tr><th>Data</th><th>Peso</th><th>Altura</th><th>Gordura</th><th>Dist.</th><th>Salto</th><th>Acel.</th><th>Veloc.</th><th>Agil.</th></tr></thead><tbody>${avals.map(a=>`<tr><td>${escapeHTML(a.data)}</td><td>${escapeHTML(a.peso)}</td><td>${escapeHTML(a.altura)}</td><td>${escapeHTML(a.gordura)}</td><td>${escapeHTML(a.distancia)}</td><td>${escapeHTML(a.salto)}</td><td>${escapeHTML(a.aceleracao)}</td><td>${escapeHTML(a.velocidade)}</td><td>${escapeHTML(a.agilidade)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="aviso">Nenhuma avaliação física encontrada.</div>';document.getElementById('ficha-container').innerHTML=`<div class="ficha-wrap"><div class="foto-area"><img src="${foto(row)}" onerror="this.src='logo.png'" alt="${escapeHTML(nomeCompleto(row))}"></div><div class="dados-area"><h1 class="apelido">${escapeHTML(apelido(row))}</h1><div class="nome-completo">${escapeHTML(nomeCompleto(row))}</div><div class="info-grid"><p><strong>Ano:</strong> ${escapeHTML(anoAtleta(row))}</p><p><strong>Nascimento:</strong> ${escapeHTML(nascimento(row))}</p><p><strong>Posição:</strong> ${escapeHTML(posicao(row))}</p><p><strong>Cidade:</strong> ${escapeHTML(cidade(row))}</p></div><div id="portal-goleiro-info-inline" class="portal-goleiro-inline"></div><div id="preparacao-fisica-resposta-inline"></div>${resumo}<div class="preparacao-fisica-area"><button type="button" class="preparacao-fisica-btn" onclick="abrirPreparacaoFisicaPortal()">Preparação Física</button></div></div></div>`;}
-function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';goleiroInfoPortalAtleta=null;preparacaoFisicaRespostasAtuais=[];fecharPreparacaoFisicaPortal();document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';resetarOlhoSenhaPortal();const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=false;}
+function sairPortalAtleta(){sessionStorage.removeItem('portal_atleta_logado');portalLimparLoginLocal();atletaLogado=null;window._portalPsrEnviado=false;window._portalPseEnviado=false;documentosPortalAtleta={trabalho:null,planejamento:null,trabalhoVisto:false,planejamentoVisto:false};atualizarSinalLogoENotificacoesPortal();const actionPanel=document.getElementById('portal-action-panel');if(actionPanel)actionPanel.style.display='none';const docs=document.getElementById('portal-documentos-buttons');if(docs)docs.style.display='none';goleiroInfoPortalAtleta=null;preparacaoFisicaRespostasAtuais=[];fecharPreparacaoFisicaPortal();document.getElementById('ficha-screen').classList.remove('active');document.getElementById('login-screen').classList.add('active');document.getElementById('login-senha').value='';resetarOlhoSenhaPortal();const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=true;}
 async function tentarRestaurarSessao(){const s=sessionStorage.getItem('portal_atleta_logado');if(!s)return;try{const obj=JSON.parse(s);const row=atletasBanco.find(r=>nomeCompleto(r)===obj.nomeCompleto&&nascimento(r)===obj.nascimento);if(row)mostrarFicha(row);}catch(e){}}
-window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');resetarOlhoSenhaPortal();iniciarEnterLoginPortal();iniciarInatividadePortal();await carregarAtletas();await tentarLoginLocalSalvo();});
+
+function portalEhAppNativo(){
+ try{return !!(window.CFA_PORTAL_APP&&window.CFA_PORTAL_APP.nativo)||!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());}
+ catch(e){return false;}
+}
+function contagemPendenciasPortal(){
+ let n=0;
+ if(atletaLogado){
+  if(portalDentroHorario('psr') && !window._portalPsrEnviado) n++;
+  if(portalDentroHorario('pse') && !window._portalPseEnviado) n++;
+  if(documentosPortalAtleta.trabalho && !documentosPortalAtleta.trabalhoVisto) n++;
+  if(documentosPortalAtleta.planejamento && !documentosPortalAtleta.planejamentoVisto) n++;
+ }
+ return n;
+}
+function atualizarSinalLogoENotificacoesPortal(){
+ const n=contagemPendenciasPortal();
+ const payload={
+  logado:!!atletaLogado,
+  coordenacao:!!(atletaLogado&&atletaLogado.coordenacao),
+  nomeCompleto: atletaLogado?String(atletaLogado.nomeCompleto||''):'',
+  nascimento: atletaLogado?String(atletaLogado.nascimento||''):'',
+  ano: atletaLogado&&atletaLogado.row?String(anoAtleta(atletaLogado.row)||''):'',
+  psrPendente: !!(atletaLogado && portalDentroHorario('psr') && !window._portalPsrEnviado),
+  psePendente: !!(atletaLogado && portalDentroHorario('pse') && !window._portalPseEnviado),
+  psrNaoEnviadoHoje: !!(atletaLogado && !window._portalPsrEnviado && !(atletaLogado&&atletaLogado.coordenacao)),
+  pseNaoEnviadoHoje: !!(atletaLogado && !window._portalPseEnviado && !(atletaLogado&&atletaLogado.coordenacao)),
+  trabalhoNovo: !!(documentosPortalAtleta.trabalho && !documentosPortalAtleta.trabalhoVisto),
+  planejamentoNovo: !!(documentosPortalAtleta.planejamento && !documentosPortalAtleta.planejamentoVisto),
+  trabalhoChave: documentosPortalAtleta.trabalho ? String(documentosPortalAtleta.trabalho.id||documentosPortalAtleta.trabalho.public_url||documentosPortalAtleta.trabalho.storage_path||'') : '',
+  planejamentoChave: documentosPortalAtleta.planejamento ? String(documentosPortalAtleta.planejamento.id||documentosPortalAtleta.planejamento.public_url||documentosPortalAtleta.planejamento.storage_path||'') : '',
+  pendencias:n
+ };
+ try{ if(window.CFA_PORTAL_APP && typeof window.CFA_PORTAL_APP.sincronizarAlertas==='function') window.CFA_PORTAL_APP.sincronizarAlertas(payload); }catch(e){}
+}
+
+function atualizarStatusAppPortal(){
+  const el=document.getElementById('portal-app-status');
+  if(!el)return;
+  const cap=!!window.Capacitor;
+  const nat=!!(window.CFA_PORTAL_APP&&window.CFA_PORTAL_APP.nativo);
+  const st=(window.CFA_PORTAL_APP&&window.CFA_PORTAL_APP.status)||'';
+  const tok=(window.CFA_PORTAL_APP&&window.CFA_PORTAL_APP.fcmToken)?'token ok':'sem token';
+  el.textContent=(nat?'APK nativo':'NÃO é o APK')+' · '+tok+(st?' · '+st:'')+(cap?'':' · sem Capacitor');
+}
+window.addEventListener('DOMContentLoaded',async()=>{sessionStorage.removeItem('portal_atleta_logado');resetarOlhoSenhaPortal();iniciarEnterLoginPortal();iniciarInatividadePortal();const chk=document.getElementById('login-manter-conectado');if(chk)chk.checked=true;atualizarStatusAppPortal();setInterval(atualizarStatusAppPortal,1500);await carregarAtletas();await tentarLoginLocalSalvo();setInterval(()=>{if(atletaLogado){atualizarBotoesQuestionariosPortal();carregarDocumentosPortalAtleta();}},180000);});
 
 
 /* === PSR / PSE - Relatório diário do atleta === */
